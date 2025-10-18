@@ -1,5 +1,6 @@
 import socket
 
+#create client
 client = socket.socket()
 client.connect(('localhost', 4444))
 client.send("Hello Server".encode())

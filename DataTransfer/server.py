@@ -1,5 +1,6 @@
 import socket
 
+#create socket
 server = socket.socket()
 server.bind(('localhost', 4444))
 server.listen(1)
