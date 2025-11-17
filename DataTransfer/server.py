@@ -3,10 +3,18 @@ import socket
 #create socket
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('0.0.0.0', 4444))
+data = open("data.txt", "r")
 
-server.listen(1)
+server.listen(5)
 
-while True:
-    client, addr = server.accept()
-    print(client.recv(1024).decode())
-    client.send("Hello From Server".encode())
+client, addr = server.accept()
+while client:
+    i = data.read()
+    client.send(i.encode())
+
+    i = input("Want to exit? ")
+    if i == "quit":
+        client.send(i.encode())
+        client.close()
+
+
