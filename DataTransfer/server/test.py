@@ -1,149 +1,164 @@
+#!/usr/bin/env python3
 import serial
 import struct
+import json
 import time
 import math
 
-# =======================
-#  OPEN SERIAL PORT
-# =======================
-ser = serial.Serial(
-        '/dev/ttyACM0',   # change if your device is different
-        baudrate=115200,
-        timeout=1
-        )
+# ==========================
+# USER SETTINGS
+# ==========================
+PORT = "/dev/ttyACM0"
+CAL_FILE = "calibration.json"
 
-print("Opened:", ser.name)
+SWEEP_DELAY = 0.40
+MAX_RETRIES = 5
 
-# =======================
-#  REGISTER HELPERS
-# =======================
+# ==========================
+# SERIAL INIT
+# ==========================
+ser = serial.Serial(PORT, baudrate=115200, timeout=1)
+print("Opened", ser.name)
 
-def write_reg_1(addr, val):
-    ser.write(bytes([0x20, addr, val & 0xFF]))
+# ==========================
+# USB HELPERS
+# ==========================
+def write_reg_1(a, v): ser.write(bytes([0x20, a, v & 0xFF]))
+def write_reg_2(a, v): ser.write(bytes([0x21, a, v & 0xFF, (v >> 8) & 0xFF]))
+def write_reg_8(a, v): ser.write(bytes([0x23, a]) + v.to_bytes(8, "little"))
+def read_reg_2(a): ser.write(bytes([0x11, a])); return ser.read(2)
+def read_fifo(a, c): ser.write(bytes([0x18, a, c])); return ser.read(c * 32)
 
-def write_reg_2(addr, val):
-    ser.write(bytes([
-        0x21, addr,
-        val & 0xFF,
-        (val >> 8) & 0xFF
-        ]))
+# ==========================
+# LOAD CALIBRATION
+# ==========================
+def load_calibration(filename):
+    with open(filename, "r") as f:
+        d = json.load(f)
 
-def write_reg_4(addr, val):
-    ser.write(bytes([0x22, addr]) + val.to_bytes(4, 'little'))
+    start = d["start_freq"]
+    step  = d["step_freq"]
+    pts   = d["num_points"]
 
-def write_reg_8(addr, val):
-    ser.write(bytes([0x23, addr]) + val.to_bytes(8, 'little'))
+    E_d = [complex(x[0], x[1]) for x in d["E_d"]]
+    E_s = [complex(x[0], x[1]) for x in d["E_s"]]
+    E_r = [complex(x[0], x[1]) for x in d["E_r"]]
 
-def read_reg_1(addr):
-    ser.write(bytes([0x10, addr]))
-    return ser.read(1)
+    print("\nLoaded calibration.")
+    return start, step, pts, E_d, E_s, E_r
 
-def read_reg_2(addr):
-    ser.write(bytes([0x11, addr]))
-    return ser.read(2)
+# ==========================
+# PROGRAM SWEEP
+# ==========================
+def program_sweep(start, step, pts):
+    write_reg_8(0x00, start)
+    write_reg_8(0x10, step)
+    write_reg_2(0x20, pts)
 
-def read_reg_4(addr):
-    ser.write(bytes([0x12, addr]))
-    return ser.read(4)
+    dev_pts = int.from_bytes(read_reg_2(0x20), "little")
+    print("Device points:", dev_pts)
+    return dev_pts
 
-def read_fifo(addr, count):
-    # 0x18 = READFIFO
-    ser.write(bytes([0x18, addr, count]))
-    return ser.read(count * 32)   # 32 bytes per point
+# ==========================
+# ROBUST SWEEP
+# ==========================
+def acquire_sweep(start_freq, step_freq, expected_points):
 
-# =======================
-#  CONFIGURE SWEEP
-# =======================
+    for attempt in range(1, MAX_RETRIES + 1):
+        print(f"Sweep attempt {attempt}/{MAX_RETRIES}")
 
-# What we *ask* for (device may clamp this)
-start_freq      = 1_000_000      # 1 MHz
-step_freq       = 1_000          # 1 kHz
-requested_points = 101           # we want 101, but device may override
+        write_reg_1(0x30, 0); time.sleep(0.05)
+        write_reg_1(0x30, 0); time.sleep(0.05)
 
-print("Configuring sweep registers...")
-write_reg_8(0x00, start_freq)        # sweepStartHz
-write_reg_8(0x10, step_freq)         # sweepStepHz
-write_reg_2(0x20, requested_points)  # sweepPoints (device may change this)
+        write_reg_1(0x27, 1)
+        time.sleep(SWEEP_DELAY)
 
-# Read back what the device actually accepted
-dev_points_bytes = read_reg_2(0x20)
-if len(dev_points_bytes) != 2:
-    raise RuntimeError("Failed to read sweepPoints back from device")
+        raw = read_fifo(0x30, expected_points)
+        n = len(raw) // 32
+        print(" Points:", n)
 
-dev_points = int.from_bytes(dev_points_bytes, 'little')
-print(f"Requested sweepPoints = {requested_points}, device uses = {dev_points}")
+        if n == expected_points:
+            freqs = []
+            S11 = []
 
-# Use the device's number of points from now on
-num_points = dev_points
+            for i in range(n):
+                blk = raw[i*32:(i+1)*32]
 
-# =======================
-#  CLEAR FIFO, START SWEEP
-# =======================
+                fwdRe = struct.unpack("<i", blk[0:4])[0]
+                fwdIm = struct.unpack("<i", blk[4:8])[0]
+                revRe = struct.unpack("<i", blk[8:12])[0]
+                revIm = struct.unpack("<i", blk[12:16])[0]
 
-print("Clearing FIFO...")
-write_reg_1(0x30, 0)          # any value clears FIFO
-time.sleep(0.05)
+                fwd = complex(fwdRe, fwdIm)
+                rev = complex(revRe, revIm)
 
-print("Starting sweep...")
-write_reg_1(0x27, 1)          # trigger sweep
-time.sleep(0.2)               # give it time to finish (tune if needed)
+                idx = struct.unpack("<H", blk[24:26])[0]
+                freq = start_freq + idx * step_freq
 
-# =======================
-#  READ FIFO
-# =======================
+                freqs.append(freq)
+                S11.append(0+0j if fwd == 0 else rev / fwd)
 
-raw = read_fifo(0x30, num_points)
-print("RAW LENGTH:", len(raw), "bytes (expected", num_points * 32, ")")
+            return freqs, S11
 
-expected_len = num_points * 32
-if len(raw) != expected_len:
-    print("\n[WARNING]")
-    print(f"Device returned {len(raw)} bytes, expected {expected_len}.")
-    print("We will parse only full 32-byte blocks that exist.\n")
+        print(" MISMATCH → retrying...")
 
-# =======================
-#  PARSE BLOCKS
-# =======================
+    raise RuntimeError("Failed to acquire sweep.")
 
-max_blocks = len(raw) // 32   # number of full blocks we actually have
-print(f"Parsing {max_blocks} full blocks...\n")
+# ==========================
+# APPLY CALIBRATION
+# ==========================
+def apply_calibration(s_raw, E_d, E_s, E_r):
+    N = min(len(s_raw), len(E_d))
+    out = []
 
-for i in range(max_blocks):
-    block = raw[i*32:(i+1)*32]
+    for i in range(N):
+        m = s_raw[i]
+        Ed, Es, Er = E_d[i], E_s[i], E_r[i]
 
-    if len(block) != 32:
-        print(f"[ERROR] Block {i} length = {len(block)}")
-        break
+        num = (m - Ed)
+        den = Er + Es * (m - Ed)
 
-    # Extract raw IQ components
-    fwd0Re = struct.unpack('<i', block[0:4])[0]
-    fwd0Im = struct.unpack('<i', block[4:8])[0]
-    rev0Re = struct.unpack('<i', block[8:12])[0]
-    rev0Im = struct.unpack('<i', block[12:16])[0]
-    rev1Re = struct.unpack('<i', block[16:20])[0]
-    rev1Im = struct.unpack('<i', block[20:24])[0]
-    freqIdx = struct.unpack('<H', block[24:26])[0]
+        X = 0+0j if den == 0 else num / den
+        out.append(X)
 
-    # Compute S11 and S21 complex values
-    # S11 = reflected / forward
-    fwd_complex = complex(fwd0Re, fwd0Im)
-    refl_complex = complex(rev0Re, rev0Im)
-    thru_complex = complex(rev1Re, rev1Im)
+    return out
 
-    if fwd_complex != 0:
-        S11 = refl_complex / fwd_complex
-        S21 = thru_complex / fwd_complex
-    else:
-        S11 = 0
-        S21 = 0
+# ==========================
+# MAIN
+# ==========================
+if __name__ == "__main__":
+    start, step, pts, E_d, E_s, E_r = load_calibration(CAL_FILE)
+    dev_pts = program_sweep(start, step, pts)
 
-    # Magnitude and phase
-    S11_mag = abs(S11)
+    input("\nConnect ANTENNA and press ENTER...")
 
-    print(f"Point {i:3d} (freqIdx={freqIdx:3d}): "
-          f"S11 = {S11.real:.4e} + j{S11.imag:.4e}, ")
+    freqs, S11_raw = acquire_sweep(start, step, dev_pts)
+    S11_cal = apply_calibration(S11_raw, E_d, E_s, E_r)
 
+    print("\nFreq (MHz) | S11_cal (X+jY) |  dB  |  SWR | Error | |Error|")
+    print("------------------------------------------------------------------------")
 
+    for f, raw, cal in zip(freqs, S11_raw, S11_cal):
+        freq_mhz = f / 1e6
 
-print("\nDone.")
+        # SWR
+        gamma = abs(cal)
+        swr = (1+gamma)/(1-gamma) if gamma < 1 else float("inf")
+
+        # dB magnitude
+        if gamma == 0:
+            db = float("-inf")
+        else:
+            db = 20 * math.log10(gamma)
+
+        # Error
+        err = raw - cal
+        err_mag = abs(err)
+
+        print(f"{freq_mhz:9.3f} | "
+              f"{cal.real:+.3e}{cal.imag:+.3e}j | "
+              f"{db:6.2f} | "
+              f"{swr:6.2f} | "
+              f"{err.real:+.3e}{err.imag:+.3e}j | "
+              f"{err_mag:.3e}")
 
