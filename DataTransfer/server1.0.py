@@ -1,13 +1,17 @@
 import socket
 
-server = socket.socket()
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('0.0.0.0', 4444))
 server.listen(1)
-print("lisening...")
 
-conn, addr = server.accept()
-print(f"connection from: *Ip Addres*")
-data = conn.recv(1024).decode()
-print("Received: ", data)
-conn.send("Hello Client".encode())
-conn.close()
+data = open("data.txt", "r")
+
+client, addr = server.accept()
+while client:
+    i = data.read()
+    client.send(i.encode())
+
+    i = input("Want to exit? ")
+    if i == "quit":
+        client.send(i.encode())
+        client.close()
