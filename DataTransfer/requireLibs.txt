@@ -1,5 +1,5 @@
 numpy
-pygame
+pygame-ce
 matplotlib
 pyusb
 pyserial
