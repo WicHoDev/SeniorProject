@@ -1,23 +1,20 @@
-int VRx = 2; // analog
-int VRy = 1; // analog
+int VRx = A0;//2; // analog
+int VRy = A1;//1; // analog
 int SW  = 42; // digital
 
-// digital outputs
-int LF = 13;
-int LB = 14;
-int RF = 20;
-int RB = 19;
+int y = 0;
+int x = 0;
 // digital outputs
 void setup(){
-  pinMode(LF, OUTPUT);
-  pinMode(LB, OUTPUT);
-  pinMode(RF, OUTPUT);
-  pinMode(RB, OUTPUT);
+Serial.begin(9600);
 }
 
 void loop() {
-  digitalWrite(LF, LOW);
-  delay(100);
-  digitalWrite(LF, HIGH);
-  delay(100);
+  y = analogRead(VRy);
+  x = analogRead(VRx);
+
+  Serial.println(x);
+  Serial.println(y);
+  Serial.println();
+  delay(500);
 }
