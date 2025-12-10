@@ -1,164 +1,181 @@
-#!/usr/bin/env python3
 import serial
+import socket
 import struct
-import json
 import time
 import math
+import matplotlib.pyplot as plt
 
-# ==========================
-# USER SETTINGS
-# ==========================
-PORT = "/dev/ttyACM0"
-CAL_FILE = "calibration.json"
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(('0.0.0.0', 4444))
+server.listen(2)
+conn, addr1 = server.accept()
+# data = conn.recv(1024).decode()
 
-SWEEP_DELAY = 0.40
-MAX_RETRIES = 5
 
-# ==========================
-# SERIAL INIT
-# ==========================
-ser = serial.Serial(PORT, baudrate=115200, timeout=1)
-print("Opened", ser.name)
+# =======================
+#  OPEN SERIAL PORT
+# =======================
+ser = serial.Serial(
+        '/dev/ttyACM0',   # change if your device is different
+        baudrate=115200,
+        timeout=1
+        )
 
-# ==========================
-# USB HELPERS
-# ==========================
-def write_reg_1(a, v): ser.write(bytes([0x20, a, v & 0xFF]))
-def write_reg_2(a, v): ser.write(bytes([0x21, a, v & 0xFF, (v >> 8) & 0xFF]))
-def write_reg_8(a, v): ser.write(bytes([0x23, a]) + v.to_bytes(8, "little"))
-def read_reg_2(a): ser.write(bytes([0x11, a])); return ser.read(2)
-def read_fifo(a, c): ser.write(bytes([0x18, a, c])); return ser.read(c * 32)
+print("Opened:", ser.name)
 
-# ==========================
-# LOAD CALIBRATION
-# ==========================
-def load_calibration(filename):
-    with open(filename, "r") as f:
-        d = json.load(f)
+# =======================
+#  REGISTER HELPERS
+# =======================
 
-    start = d["start_freq"]
-    step  = d["step_freq"]
-    pts   = d["num_points"]
+def write_reg_1(addr, val):
+    ser.write(bytes([0x20, addr, val & 0xFF]))
 
-    E_d = [complex(x[0], x[1]) for x in d["E_d"]]
-    E_s = [complex(x[0], x[1]) for x in d["E_s"]]
-    E_r = [complex(x[0], x[1]) for x in d["E_r"]]
+def write_reg_2(addr, val):
+    ser.write(bytes([
+        0x21, addr,
+        val & 0xFF,
+        (val >> 8) & 0xFF
+        ]))
 
-    print("\nLoaded calibration.")
-    return start, step, pts, E_d, E_s, E_r
+def write_reg_4(addr, val):
+    ser.write(bytes([0x22, addr]) + val.to_bytes(4, 'little'))
 
-# ==========================
-# PROGRAM SWEEP
-# ==========================
-def program_sweep(start, step, pts):
-    write_reg_8(0x00, start)
-    write_reg_8(0x10, step)
-    write_reg_2(0x20, pts)
+def write_reg_8(addr, val):
+    ser.write(bytes([0x23, addr]) + val.to_bytes(8, 'little'))
 
-    dev_pts = int.from_bytes(read_reg_2(0x20), "little")
-    print("Device points:", dev_pts)
-    return dev_pts
+def read_reg_1(addr):
+    ser.write(bytes([0x10, addr]))
+    return ser.read(1)
 
-# ==========================
-# ROBUST SWEEP
-# ==========================
-def acquire_sweep(start_freq, step_freq, expected_points):
+def read_reg_2(addr):
+    ser.write(bytes([0x11, addr]))
+    return ser.read(2)
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        print(f"Sweep attempt {attempt}/{MAX_RETRIES}")
+def read_reg_4(addr):
+    ser.write(bytes([0x12, addr]))
+    return ser.read(4)
 
-        write_reg_1(0x30, 0); time.sleep(0.05)
-        write_reg_1(0x30, 0); time.sleep(0.05)
+def read_fifo(addr, count):
+    ser.write(bytes([0x18, addr, count]))
+    return ser.read(count * 32)   # 32 bytes per point
 
-        write_reg_1(0x27, 1)
-        time.sleep(SWEEP_DELAY)
+# =======================
+#  CONFIGURE SWEEP
+# =======================
 
-        raw = read_fifo(0x30, expected_points)
-        n = len(raw) // 32
-        print(" Points:", n)
+start_freq      = 1_000_000      # 1 MHz
+step_freq       = 1_000          # 1 kHz
+requested_points = 101
 
-        if n == expected_points:
-            freqs = []
-            S11 = []
+print("Configuring sweep registers...")
+write_reg_8(0x00, start_freq)
+write_reg_8(0x10, step_freq)
+write_reg_2(0x20, requested_points)
 
-            for i in range(n):
-                blk = raw[i*32:(i+1)*32]
+dev_points_bytes = read_reg_2(0x20)
+if len(dev_points_bytes) != 2:
+    raise RuntimeError("Failed to read sweepPoints back from device")
 
-                fwdRe = struct.unpack("<i", blk[0:4])[0]
-                fwdIm = struct.unpack("<i", blk[4:8])[0]
-                revRe = struct.unpack("<i", blk[8:12])[0]
-                revIm = struct.unpack("<i", blk[12:16])[0]
+num_points = int.from_bytes(dev_points_bytes, 'little')
+print(f"Requested sweepPoints = {requested_points}, device uses = {num_points}")
 
-                fwd = complex(fwdRe, fwdIm)
-                rev = complex(revRe, revIm)
+# =======================
+#  CLEAR FIFO & START
+# =======================
 
-                idx = struct.unpack("<H", blk[24:26])[0]
-                freq = start_freq + idx * step_freq
+print("Clearing FIFO...")
+write_reg_1(0x30, 0)
+time.sleep(0.05)
 
-                freqs.append(freq)
-                S11.append(0+0j if fwd == 0 else rev / fwd)
+print("Starting sweep...")
+write_reg_1(0x27, 1)
+time.sleep(0.2)
 
-            return freqs, S11
+# =======================
+#  READ FIFO
+# =======================
 
-        print(" MISMATCH → retrying...")
+raw = read_fifo(0x30, num_points)
+print("RAW LENGTH:", len(raw), "bytes (expected", num_points * 32, ")")
 
-    raise RuntimeError("Failed to acquire sweep.")
+max_blocks = len(raw) // 32
+print(f"Parsing {max_blocks} full blocks...\n")
 
-# ==========================
-# APPLY CALIBRATION
-# ==========================
-def apply_calibration(s_raw, E_d, E_s, E_r):
-    N = min(len(s_raw), len(E_d))
-    out = []
+# ------------------------
+#   DATA STORAGE ARRAYS
+# ------------------------
+freqs = []
+S11_mags = []
+S11_phases = []
+S11_dB = []
+SWR_list = []
 
-    for i in range(N):
-        m = s_raw[i]
-        Ed, Es, Er = E_d[i], E_s[i], E_r[i]
+# =======================
+#  PARSE BLOCKS
+# =======================
 
-        num = (m - Ed)
-        den = Er + Es * (m - Ed)
+for i in range(max_blocks):
+    block = raw[i*32:(i+1)*32]
 
-        X = 0+0j if den == 0 else num / den
-        out.append(X)
+    fwd0Re = struct.unpack('<i', block[0:4])[0]
+    fwd0Im = struct.unpack('<i', block[4:8])[0]
+    rev0Re = struct.unpack('<i', block[8:12])[0]
+    rev0Im = struct.unpack('<i', block[12:16])[0]
 
-    return out
+    fwd_complex = complex(fwd0Re, fwd0Im)
+    refl_complex = complex(rev0Re, rev0Im)
 
-# ==========================
-# MAIN
-# ==========================
-if __name__ == "__main__":
-    start, step, pts, E_d, E_s, E_r = load_calibration(CAL_FILE)
-    dev_pts = program_sweep(start, step, pts)
+    if fwd_complex != 0:
+        S11 = refl_complex / fwd_complex
+    else:
+        S11 = 0
 
-    input("\nConnect ANTENNA and press ENTER...")
+    # Magnitude & phase
+    S11_mag = abs(S11)
+    conn.send(str(S11_mag).encode())
+    S11_phase_deg = math.degrees(math.atan2(S11.imag, S11.real))
 
-    freqs, S11_raw = acquire_sweep(start, step, dev_pts)
-    S11_cal = apply_calibration(S11_raw, E_d, E_s, E_r)
+    # Return loss in dB
+    S11_db = -20 * math.log10(S11_mag) if S11_mag > 0 else -999
 
-    print("\nFreq (MHz) | S11_cal (X+jY) |  dB  |  SWR | Error | |Error|")
-    print("------------------------------------------------------------------------")
+    # SWR
+    if S11_mag >= 1:
+        SWR = float("inf")
+    else:
+        SWR = (1 + S11_mag) / (1 - S11_mag)
 
-    for f, raw, cal in zip(freqs, S11_raw, S11_cal):
-        freq_mhz = f / 1e6
+    # Store
+    freq = start_freq + i * step_freq
+    freqs.append(freq)
+    S11_mags.append(S11_mag)
+    S11_phases.append(S11_phase_deg)
+    S11_dB.append(S11_db)
+    SWR_list.append(SWR)
 
-        # SWR
-        gamma = abs(cal)
-        swr = (1+gamma)/(1-gamma) if gamma < 1 else float("inf")
+    print(f"Point {i:3d}: freq={freq/1e6:.3f} MHz, "
+          f"S11={S11.real:.4e}+j{S11.imag:.4e}, "
+          f"SWR={SWR:.3f}, RL={S11_db:.2f} dB")
 
-        # dB magnitude
-        if gamma == 0:
-            db = float("-inf")
-        else:
-            db = 20 * math.log10(gamma)
+print("\nDone.\n")
 
-        # Error
-        err = raw - cal
-        err_mag = abs(err)
+# =======================
+#  PLOTS
+# =======================
 
-        print(f"{freq_mhz:9.3f} | "
-              f"{cal.real:+.3e}{cal.imag:+.3e}j | "
-              f"{db:6.2f} | "
-              f"{swr:6.2f} | "
-              f"{err.real:+.3e}{err.imag:+.3e}j | "
-              f"{err_mag:.3e}")
+# ---- Plot |S11| magnitude ----
+plt.figure(figsize=(10,5))
+plt.plot(freqs, S11_mags)
+plt.title("S11 Magnitude vs Frequency")
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("|S11| (linear)")
+plt.grid(True)
+plt.show()
 
+# ---- Plot S11 return loss (dB) ----
+plt.figure(figsize=(10,5))
+plt.plot(freqs, S11_dB)
+plt.title("S11 Return Loss (dB)")
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("S11 (dB)")
+plt.grid(True)
+plt.show()
