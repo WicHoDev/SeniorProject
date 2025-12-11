@@ -12,6 +12,9 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('0.0.0.0', 4444))
 server.listen(2)
 
+print("Waiting for client...")
+client, addr1 = server.accept()
+print("Client connected:", addr1)
 
 # =======================
 #  OPEN SERIAL PORT
@@ -35,7 +38,7 @@ print("Opened:", ser.name)
 # =======================
 
 start_freq       = 500_000      # 1 MHz
-step_freq        = 1_000          # 1 kHz
+step_freq        = 50_000          # 1 kHz
 requested_points = 201
 
 print("Configuring sweep registers...")
@@ -85,7 +88,10 @@ SWR_list = []
 #  PARSE BLOCKS
 # =======================
 
+
 for i in range(max_blocks):
+    print(f"[SERVER] Loop iteration {i}")  # DEBUG PRINT
+
     block = raw[i*32:(i+1)*32]
 
     fwd0Re = struct.unpack('<i', block[0:4])[0]
@@ -101,35 +107,15 @@ for i in range(max_blocks):
     else:
         S11 = 0
 
-    # Magnitude & phase
-    S11_mag = abs(S11)
-    # conn.send(str(S11_mag).encode())
-    S11_phase_deg = math.degrees(math.atan2(S11.imag, S11.real))
-
-    # Return loss in dB
-    S11_db = -20 * math.log10(S11_mag) if S11_mag > 0 else -999
-
-
-    # Store
     freq = start_freq + i * step_freq
-    freqs.append(freq)
-    S11_mags.append(S11_mag)
-    S11_phases.append(S11_phase_deg)
-    S11_dB.append(S11_db)
+    S11_real = S11.real
+    S11_imag = S11.imag
 
-    data = [freq, S11]
+    msg = f"{freq},{S11_real},{S11_imag}\n"
 
-    utils.writeFile(dataFile, data)
+    print(f"[SERVER] Sending: {msg.strip()}")  # DEBUG PRINT
 
-    client, addr1 = server.accept()
-    client.send(data[0].encode())
-    client.send(data[1].encode())
+    client.sendall(msg.encode())
 
-    print(f"Point {i:3d}: freq={freq/1e6:.3f} MHz, "
-          f"S11={S11.real:.4e}+j{S11.imag:.4e}, "
-          f"S11 dB={S11_db:.2f} dB")
-
-
-
-
-print("\nDone.\n")
+print("[SERVER] Done sending sweep.")
+client.close()
