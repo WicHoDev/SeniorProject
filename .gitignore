@@ -1,2 +1,4 @@
 DataTransfer/venv/
+DataTransfer/data.txt
+DataTransfer/server/__pycache__/
 
