@@ -1,15 +1,16 @@
 import serial
-import socket
 import struct
 import time
 import math
-import matplotlib.pyplot as plt
+import os
+import socket
+
+import registers
+import utils
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('0.0.0.0', 4444))
 server.listen(2)
-conn, addr1 = server.accept()
-# data = conn.recv(1024).decode()
 
 
 # =======================
@@ -21,58 +22,28 @@ ser = serial.Serial(
         timeout=1
         )
 
+dataFile = "data.txt"
+if os.path.exists(dataFile):
+    os.remove(dataFile)
+else: 
+    f = open(dataFile, "x")
+
+
 print("Opened:", ser.name)
-
-# =======================
-#  REGISTER HELPERS
-# =======================
-
-def write_reg_1(addr, val):
-    ser.write(bytes([0x20, addr, val & 0xFF]))
-
-def write_reg_2(addr, val):
-    ser.write(bytes([
-        0x21, addr,
-        val & 0xFF,
-        (val >> 8) & 0xFF
-        ]))
-
-def write_reg_4(addr, val):
-    ser.write(bytes([0x22, addr]) + val.to_bytes(4, 'little'))
-
-def write_reg_8(addr, val):
-    ser.write(bytes([0x23, addr]) + val.to_bytes(8, 'little'))
-
-def read_reg_1(addr):
-    ser.write(bytes([0x10, addr]))
-    return ser.read(1)
-
-def read_reg_2(addr):
-    ser.write(bytes([0x11, addr]))
-    return ser.read(2)
-
-def read_reg_4(addr):
-    ser.write(bytes([0x12, addr]))
-    return ser.read(4)
-
-def read_fifo(addr, count):
-    ser.write(bytes([0x18, addr, count]))
-    return ser.read(count * 32)   # 32 bytes per point
-
 # =======================
 #  CONFIGURE SWEEP
 # =======================
 
-start_freq      = 1_000_000      # 1 MHz
-step_freq       = 1_000          # 1 kHz
-requested_points = 101
+start_freq       = 500_000      # 1 MHz
+step_freq        = 1_000          # 1 kHz
+requested_points = 201
 
 print("Configuring sweep registers...")
-write_reg_8(0x00, start_freq)
-write_reg_8(0x10, step_freq)
-write_reg_2(0x20, requested_points)
+registers.write_reg_8(0x00, start_freq, ser)
+registers.write_reg_8(0x10, step_freq, ser)
+registers.write_reg_2(0x20, requested_points, ser)
 
-dev_points_bytes = read_reg_2(0x20)
+dev_points_bytes = registers.read_reg_2(0x20, ser)
 if len(dev_points_bytes) != 2:
     raise RuntimeError("Failed to read sweepPoints back from device")
 
@@ -84,18 +55,18 @@ print(f"Requested sweepPoints = {requested_points}, device uses = {num_points}")
 # =======================
 
 print("Clearing FIFO...")
-write_reg_1(0x30, 0)
-time.sleep(0.05)
+registers.write_reg_1(0x30, 0, ser)
+time.sleep(0.2)
 
 print("Starting sweep...")
-write_reg_1(0x27, 1)
+registers.write_reg_1(0x27, 1, ser)
 time.sleep(0.2)
 
 # =======================
 #  READ FIFO
 # =======================
 
-raw = read_fifo(0x30, num_points)
+raw = registers.read_fifo(0x30, num_points, ser)
 print("RAW LENGTH:", len(raw), "bytes (expected", num_points * 32, ")")
 
 max_blocks = len(raw) // 32
@@ -132,17 +103,12 @@ for i in range(max_blocks):
 
     # Magnitude & phase
     S11_mag = abs(S11)
-    conn.send(str(S11_mag).encode())
+    # conn.send(str(S11_mag).encode())
     S11_phase_deg = math.degrees(math.atan2(S11.imag, S11.real))
 
     # Return loss in dB
     S11_db = -20 * math.log10(S11_mag) if S11_mag > 0 else -999
 
-    # SWR
-    if S11_mag >= 1:
-        SWR = float("inf")
-    else:
-        SWR = (1 + S11_mag) / (1 - S11_mag)
 
     # Store
     freq = start_freq + i * step_freq
@@ -150,32 +116,20 @@ for i in range(max_blocks):
     S11_mags.append(S11_mag)
     S11_phases.append(S11_phase_deg)
     S11_dB.append(S11_db)
-    SWR_list.append(SWR)
+
+    data = [freq, S11]
+
+    utils.writeFile(dataFile, data)
+
+    client, addr1 = server.accept()
+    client.send(data[0].encode())
+    client.send(data[1].encode())
 
     print(f"Point {i:3d}: freq={freq/1e6:.3f} MHz, "
           f"S11={S11.real:.4e}+j{S11.imag:.4e}, "
-          f"SWR={SWR:.3f}, RL={S11_db:.2f} dB")
+          f"S11 dB={S11_db:.2f} dB")
+
+
+
 
 print("\nDone.\n")
-
-# =======================
-#  PLOTS
-# =======================
-
-# ---- Plot |S11| magnitude ----
-plt.figure(figsize=(10,5))
-plt.plot(freqs, S11_mags)
-plt.title("S11 Magnitude vs Frequency")
-plt.xlabel("Frequency (Hz)")
-plt.ylabel("|S11| (linear)")
-plt.grid(True)
-plt.show()
-
-# ---- Plot S11 return loss (dB) ----
-plt.figure(figsize=(10,5))
-plt.plot(freqs, S11_dB)
-plt.title("S11 Return Loss (dB)")
-plt.xlabel("Frequency (Hz)")
-plt.ylabel("S11 (dB)")
-plt.grid(True)
-plt.show()
