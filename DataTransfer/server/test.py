@@ -12,9 +12,6 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('0.0.0.0', 4444))
 server.listen(2)
 
-print("Waiting for client...")
-client, addr1 = server.accept()
-print("Client connected:", addr1)
 
 # =======================
 #  OPEN SERIAL PORT
@@ -31,6 +28,7 @@ if os.path.exists(dataFile):
 else: 
     f = open(dataFile, "x")
 
+client, addr0 = server.accept()
 
 print("Opened:", ser.name)
 # =======================
@@ -88,10 +86,7 @@ SWR_list = []
 #  PARSE BLOCKS
 # =======================
 
-
 for i in range(max_blocks):
-    print(f"[SERVER] Loop iteration {i}")  # DEBUG PRINT
-
     block = raw[i*32:(i+1)*32]
 
     fwd0Re = struct.unpack('<i', block[0:4])[0]
@@ -107,15 +102,30 @@ for i in range(max_blocks):
     else:
         S11 = 0
 
+    # Magnitude & phase
+    S11_mag = abs(S11)
+    # conn.send(str(S11_mag).encode())
+    S11_phase_deg = math.degrees(math.atan2(S11.imag, S11.real))
+
+    # Return loss in dB
+    S11_db = -20 * math.log10(S11_mag) if S11_mag > 0 else -999
+
+
+    # Store
     freq = start_freq + i * step_freq
-    S11_real = S11.real
-    S11_imag = S11.imag
+    freqs.append(freq)
+    S11_mags.append(S11_mag)
+    S11_phases.append(S11_phase_deg)
+    S11_dB.append(S11_db)
 
-    msg = f"{freq},{S11_real},{S11_imag}\n"
+    data = [freq, S11]
 
-    print(f"[SERVER] Sending: {msg.strip()}")  # DEBUG PRINT
+    utils.writeFile(dataFile, data)
+    # send clean formatted line
 
-    client.sendall(msg.encode())
+    msg = f"{data[0]},{data[1].real},{data[1].imag}\n"
+    client.send(msg.encode())
 
-print("[SERVER] Done sending sweep.")
-client.close()
+    print("Sent:", msg.strip())
+
+print("\nDone.\n")
