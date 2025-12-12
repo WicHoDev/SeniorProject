@@ -3,9 +3,9 @@ int VRy = A1;//1; // analog
 int SW  = 42; // digital
 
 // digital outputs
-int in1 = 2; // LF 
-int in2 = 13; // LB
-int enableA = 4;
+int in1 = 3; // LF 
+int in2 = 4; // LB
+int enableA = 2;
 
 int in3 = 5; // RF
 int in4 = 6; // RB
@@ -65,11 +65,11 @@ void loop() {
   // left
   else if(x > center + deadBand){
     digitalWrite(in1, LOW);
-    digitalWrite(in2, LOW);
+    digitalWrite(in2, HIGH);
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
 
-    analogWrite(enableA, 0);
+    analogWrite(enableA, map(x, center + deadBand, rMax,0, 255));
     analogWrite(enableB, map(x, center + deadBand, rMax, 0, 255));
   }
   // right
@@ -77,15 +77,15 @@ void loop() {
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
     digitalWrite(in3, LOW);
-    digitalWrite(in4, LOW);
+    digitalWrite(in4, HIGH);
     analogWrite(enableA, map(x, rMin, center - deadBand, 255, 0));
-    analogWrite(enableB, 0);
+    analogWrite(enableB, map(x, rMin, center - deadBand, 255, 0));
   }else{
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
     digitalWrite(in3, LOW);
     digitalWrite(in4, LOW);
-    analogWrite(enableA, 0);
     analogWrite(enableB, 0);
+    analogWrite(enableA, 0);
   }
 }
