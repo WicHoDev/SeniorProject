@@ -1,20 +1,20 @@
-int VRx = A0;//2; // analog
-int VRy = A1;//1; // analog
+int VRx = 2; // analog
+int VRy = 1; // analog
 int SW  = 42; // digital
 
 // digital outputs
-int in1 = 3; // LF 
-int in2 = 4; // LB
-int enableA = 2;
+int in1 = 36; // LF 
+int in2 = 35; // LB
+int enableA = 37;
 
-int in3 = 5; // RF
-int in4 = 6; // RB
-int enableB = 7;
+int in3 = 17; // RF
+int in4 = 18; // RB
+int enableB = 8;
 
-int rMax = 1023;
+int rMax = 4095;
 int rMin = 0;
 int center = (rMax/2);
-int deadBand = 100;
+int deadBand = 200;
 
  // 0 - 1890 - 4096
 int x = 0; 
