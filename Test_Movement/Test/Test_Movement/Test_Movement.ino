@@ -1,5 +1,5 @@
-int VRx = A0;//2; // analog
-int VRy = A1;//1; // analog
+int VRx = 2; // analog
+int VRy = 1; // analog
 int SW  = 42; // digital
 
 int y = 0;
