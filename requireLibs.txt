@@ -1,0 +1,4 @@
+# sort the dependencies in Alphabetical Order 
+numpy
+matplotlib
+#pygame-ce
