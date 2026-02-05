@@ -1,0 +1,3 @@
+# schematics
+![](./inlude/motorschamatic.jpg)
+
