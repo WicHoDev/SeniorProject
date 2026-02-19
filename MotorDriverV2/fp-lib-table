@@ -1,0 +1,5 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "TC78H620FNG")(type "KiCad")(uri "${KIPRJMOD}/Componets/TC78H620FNG")(options "")(descr ""))
+  (lib (name "ESP32-C3FH4X")(type "KiCad")(uri "${KIPRJMOD}/Componets/ESP32-C3FH4X")(options "")(descr ""))
+)
