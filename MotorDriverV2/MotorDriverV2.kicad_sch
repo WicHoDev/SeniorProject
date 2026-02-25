@@ -806,7 +806,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "44396b83-15e2-487e-a1ff-26874275d485")
-		(property "Reference" "#FLG01"
+		(property "Reference" "#FLG03"
 			(at 28.575 22.86 0)
 			(effects
 				(font
@@ -858,7 +858,7 @@
 		(instances
 			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef"
-					(reference "#FLG01")
+					(reference "#FLG03")
 					(unit 1)
 				)
 			)
@@ -1078,7 +1078,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "cf92fa2a-4fad-4f82-b154-4535d55cf918")
-		(property "Reference" "#FLG03"
+		(property "Reference" "#FLG01"
 			(at 22.225 25.4 0)
 			(effects
 				(font
@@ -1130,7 +1130,7 @@
 		(instances
 			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef"
-					(reference "#FLG03")
+					(reference "#FLG01")
 					(unit 1)
 				)
 			)
