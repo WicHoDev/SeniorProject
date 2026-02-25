@@ -1,4 +1,4 @@
-27222559799907858
+27222561772131074
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -60171,6 +60171,13 @@ ceramic
 0
 3
 3
+DRV8871DDARQ1
+SOIC127P600X170-9N
+DRV8871DDARQ1-1
+Integrated Circuit
+0
+9
+9
 Diode_SMD
 D_0201_0603Metric
 Diode SMD 0201 (0603 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: https://www.vishay.com/docs/20052/crcw0201e3.pdf), generated with kicad-footprint-generator
@@ -62194,13 +62201,13 @@ One digit LED 7 segment SA39-11 SC39-11 SA39-12 SC39-12
 0
 10
 10
-ESP32-C3FH4X
-QFN50P500X500X90-33N-D
-32-pin QFN
+ESP32-S2FH4
+QFN40P700X700X90-57N-D
+QFN56 (7×7 mm) Package
 Integrated Circuit
 0
-33
-33
+57
+57
 Ferrite_THT
 LairdTech_28C0236-0JW-10
 Ferrite, vertical, LairdTech 28C0236-0JW-10, https://assets.lairdtech.com/home/brandworld/files/28C0236-0JW-10.pdf, JW Miller core https://www.bourns.com/products/magnetic-products/j.w.-miller-through-hole-ferrite-beads-emi-filters
@@ -100771,13 +100778,6 @@ Logo WEEE
 0
 0
 0
-TC78H620FNG
-SOP65P640X160-16N
-SSOP16-P-225_0.65B
-Integrated Circuit
-0
-16
-16
 TerminalBlock
 TerminalBlock_MaiXu_MX126-5.0-02P_1x02_P5.00mm
 terminal block MaiXu MX126-5.0-02P, 2 pins, pitch 5mm, size 10.5x7.8mm, drill diameter 1.3mm, pad diameter 2.8mm, https://www.lcsc.com/datasheet/lcsc_datasheet_2309150913_MAX-MX126-5-0-03P-GN01-Cu-S-A_C5188435.pdf, script-generated using https://gitlab.com/kicad/libraries/kicad-footprint-generator/-/tree/master/scripts/TerminalBlock_MaiXu

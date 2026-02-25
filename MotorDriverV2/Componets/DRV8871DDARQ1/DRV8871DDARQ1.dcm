@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP DRV8871DDARQ1
+D 3.6A Automotive Brushed DC Motor Driver With Integrated Current Sensing (PWM Ctrl)
+K
+F http://www.ti.com/lit/gpn/drv8871-q1
+$ENDCMP
+#
+#End Doc Library
