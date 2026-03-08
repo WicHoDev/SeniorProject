@@ -621,14 +621,6 @@
     [
       "9a6a3a05-adb1-47eb-a38b-9a704717c7ef",
       "Root"
-    ],
-    [
-      "99db9728-3194-4b24-aa4b-533760f9cc37",
-      "uController"
-    ],
-    [
-      "4209b06f-3636-43d0-a316-8309ac72fc0f",
-      "MotroDriver"
     ]
   ],
   "text_variables": {}

@@ -1066,16 +1066,6 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 71.12) (xy 82.55 71.12)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1b74e8ca-88e0-4991-a110-1edc4ff83996")
-	)
-	(wire
-		(pts
 			(xy 185.42 86.36) (xy 186.69 86.36)
 		)
 		(stroke
@@ -1446,16 +1436,6 @@
 	)
 	(wire
 		(pts
-			(xy 156.21 69.85) (xy 157.48 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e3697e77-f712-4de5-b4b8-8c8e3bd57467")
-	)
-	(wire
-		(pts
 			(xy 200.66 109.22) (xy 195.58 109.22)
 		)
 		(stroke
@@ -1463,16 +1443,6 @@
 			(type default)
 		)
 		(uuid "e51d24f7-820c-4d75-bbd6-9c7b2fec10fa")
-	)
-	(wire
-		(pts
-			(xy 156.21 72.39) (xy 157.48 72.39)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f308a125-32f2-408c-8775-60eb32019411")
 	)
 	(wire
 		(pts
@@ -1493,16 +1463,6 @@
 			(type default)
 		)
 		(uuid "fdcb5849-eed6-4936-96aa-3d1d291f0617")
-	)
-	(wire
-		(pts
-			(xy 80.01 68.58) (xy 82.55 68.58)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "fe558362-6cb7-4463-a747-1e776de79f79")
 	)
 	(global_label "Out1_2"
 		(shape input)
@@ -1544,50 +1504,6 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "In1_2"
-		(shape input)
-		(at 82.55 71.12 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "3f8ce263-7e40-4553-a911-2255e0f191ae")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 90.6756 71.12 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "In2_2"
-		(shape input)
-		(at 157.48 69.85 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "50ec7255-a6bb-45ee-bc1a-1b63fc9e508e")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 165.6056 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
 				(hide yes)
 			)
 		)
@@ -1746,28 +1662,6 @@
 			)
 		)
 	)
-	(global_label "In1_1"
-		(shape input)
-		(at 82.55 68.58 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "e4b3fa61-4b45-4187-8ba8-01bbc435c9b7")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 90.6756 68.58 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "Out1_1"
 		(shape input)
 		(at 104.14 68.58 0)
@@ -1803,28 +1697,6 @@
 		(uuid "f5934152-ff30-4415-943b-36a5c654f07c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 118.797 91.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "In2_1"
-		(shape input)
-		(at 157.48 72.39 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "fc989338-d1d6-4488-8612-31b229388477")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 165.6056 72.39 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2185,7 +2057,7 @@
 			(uuid "6a8b987d-b469-4ce9-bc1b-5631a1b47859")
 		)
 		(instances
-			(project ""
+			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
 					(reference "#PWR06")
 					(unit 1)
@@ -2528,7 +2400,7 @@
 			(uuid "72e9e112-4798-4e64-8129-7c9e669f8f8c")
 		)
 		(instances
-			(project ""
+			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
 					(reference "IC1")
 					(unit 1)
@@ -2595,7 +2467,7 @@
 			(uuid "e9b32e8c-2622-4f41-a04e-7f6430e7b466")
 		)
 		(instances
-			(project ""
+			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
 					(reference "#PWR05")
 					(unit 1)
@@ -2739,140 +2611,6 @@
 			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
 					(reference "IC2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:Conn_01x02_Pin")
-		(at 74.93 68.58 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "86493b9c-b924-48c2-ae4f-ba3ea15d1145")
-		(property "Reference" "J2"
-			(at 75.692 67.056 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "Out_A"
-			(at 73.914 69.85 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
-			(at 74.93 68.58 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 74.93 68.58 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 74.93 68.58 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "09f6ec72-bf43-4287-ad90-3754e2b3c56e")
-		)
-		(pin "2"
-			(uuid "b7e67132-4b69-4a3c-912d-c1dbb037fbeb")
-		)
-		(instances
-			(project "MotorDriverV2"
-				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
-					(reference "J2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector:Conn_01x02_Pin")
-		(at 151.13 69.85 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "959db241-413a-4706-8eb9-912909722532")
-		(property "Reference" "J4"
-			(at 151.892 68.326 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "Out_B"
-			(at 150.114 71.12 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
-			(at 151.13 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 151.13 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x02, script generated"
-			(at 151.13 69.85 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "d499de4c-860e-4436-b873-23b41fffe2e6")
-		)
-		(pin "2"
-			(uuid "7af3dff7-5b89-4f77-ba68-d77529fdca61")
-		)
-		(instances
-			(project "MotorDriverV2"
-				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
-					(reference "J4")
 					(unit 1)
 				)
 			)
@@ -3144,7 +2882,7 @@
 			(uuid "e4b15893-aade-46ec-b3af-9294d2245640")
 		)
 		(instances
-			(project ""
+			(project "MotorDriverV2"
 				(path "/9a6a3a05-adb1-47eb-a38b-9a704717c7ef/4209b06f-3636-43d0-a316-8309ac72fc0f"
 					(reference "R1")
 					(unit 1)

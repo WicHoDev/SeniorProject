@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP PTS636SKG25JSMTR_LFS
+D Tactile Switches Tact 50mA 12VDC, 6.0x3.5, 2.5mm H, 250gf, J leads, Ground pin, Red Actuator
+K
+F https://www.ckswitches.com/media/2779/pts636.pdf
+$ENDCMP
+#
+#End Doc Library
