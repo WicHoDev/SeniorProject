@@ -2,6 +2,6 @@
   (version 7)
   (lib (name "DRV8871DDARQ1")(type "KiCad")(uri "${KIPRJMOD}/Componets/DRV8871DDARQ1/DRV8871DDARQ1.kicad_sym")(options "")(descr "Motor Driver"))
   (lib (name "ESP32-S3-WROOM-1U-N4")(type "KiCad")(uri "${KIPRJMOD}/Componets/ESP32-S3-WROOM-1U-N4/ESP32-S3-WROOM-1U-N4.kicad_sym")(options "")(descr "uController"))
-  (lib (name "PTS636SKG25JSMTR")(type "KiCad")(uri "${KIPRJMOD}/Componets/PTS636SKG25JSMTR_LFS/PTS636SKG25JSMTR_LFS.kicad_sym")(options "")(descr "SW button"))
-  (lib (name "LM1117IMPX-3v3")(type "KiCad")(uri "${KIPRJMOD}/Componets/LM1117IMPX-3.3_NOPB/LM1117IMPX-3_3_NOPB.kicad_sym")(options "")(descr "3v3 Regulator"))
+  (lib (name "PTS636SKG25JSMTR_LFS")(type "KiCad")(uri "${KIPRJMOD}/Componets/PTS636SKG25JSMTR_LFS/PTS636SKG25JSMTR_LFS.kicad_sym")(options "")(descr ""))
+  (lib (name "LM1117IMPX-3_3_NOPB")(type "KiCad")(uri "${KIPRJMOD}/Componets/LM1117IMPX-3.3_NOPB/LM1117IMPX-3_3_NOPB.kicad_sym")(options "")(descr ""))
 )
