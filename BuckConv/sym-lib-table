@@ -1,0 +1,5 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "TPS54560BDDAR") (type "KiCad") (uri "${KIPRJMOD}/Components/TPS54560BDDAR/TPS54560BDDAR.kicad_sym") (options "Inductor 7.2uH") (descr ""))
+	(lib (name "WE-PDF_1064") (type "KiCad") (uri "${KIPRJMOD}/Components/7447798720/WE-PDF_1064.kicad_sym") (options "Voltage reg") (descr ""))
+)
