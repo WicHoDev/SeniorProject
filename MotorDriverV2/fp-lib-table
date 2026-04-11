@@ -1,7 +1,8 @@
 (fp_lib_table
-  (version 7)
-  (lib (name "DRV8871DDARQ1")(type "KiCad")(uri "${KIPRJMOD}/Componets/DRV8871DDARQ1")(options "")(descr "Motor Driver"))
-  (lib (name "ESP32-S3-WROOM-1U-N4")(type "KiCad")(uri "${KIPRJMOD}/Componets/ESP32-S3-WROOM-1U-N4")(options "")(descr "uController"))
-  (lib (name "LM1117IMPX-3.3")(type "KiCad")(uri "${KIPRJMOD}/Componets/LM1117IMPX-3.3_NOPB")(options "")(descr "3v3 Regulator"))
-  (lib (name "PTS636SKG25JSMTR_LFS")(type "KiCad")(uri "${KIPRJMOD}/Componets/PTS636SKG25JSMTR_LFS")(options "")(descr ""))
+	(version 7)
+	(lib (name "DRV8871DDARQ1") (type "KiCad") (uri "${KIPRJMOD}/Componets/DRV8871DDARQ1") (options "") (descr "Motor Driver"))
+	(lib (name "ESP32-S3-WROOM-1U-N4") (type "KiCad") (uri "${KIPRJMOD}/Componets/ESP32-S3-WROOM-1U-N4") (options "") (descr "uController"))
+	(lib (name "LM1117IMPX-3.3") (type "KiCad") (uri "${KIPRJMOD}/Componets/LM1117IMPX-3.3_NOPB") (options "") (descr "3v3 Regulator"))
+	(lib (name "PTS636SKG25JSMTR_LFS") (type "KiCad") (uri "${KIPRJMOD}/Componets/PTS636SKG25JSMTR_LFS") (options "") (descr ""))
+	(lib (name "FFLogo") (type "KiCad") (uri "${KIPRJMOD}/Componets/FFLogo") (options "") (descr ""))
 )
