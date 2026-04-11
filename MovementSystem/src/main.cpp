@@ -10,11 +10,15 @@ int in1 = 36; // LF
 int in2 = 35; // LB
 int enableA = 37;
 
-int in3 = 17; // RF
-int in4 = 18; // RB
-int enableB = 8;
+// int in3 = 17; // RF
+// int in4 = 18; // RB
+// int enableB = 8;
+int in3 = 21; // RF
+int in4 = 47; // RB
+int enableB = 48;
 
-int rMax = 4095;
+// int rMax = 4095;
+int rMax = 1024;
 int rMin = 0;
 int center = (rMax/2);
 int deadBand = 200;
