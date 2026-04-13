@@ -1,0 +1,3 @@
+# sort the dependencies in Alphabetical Order
+fastapi
+uvicorn
