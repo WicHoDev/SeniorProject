@@ -4,5 +4,5 @@ app = FastAPI()
 
 @app.get("/")
 def welcome():
-    x = {"Message": "Hello World"}
+    x = "Test, Hello"
     return x
