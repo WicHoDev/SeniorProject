@@ -1,3 +1,8 @@
 # sort the dependencies in Alphabetical Order
 fastapi
+flask
+flask-socketio
+numpy
+scipy
+pyserial
 uvicorn

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFCW GPR — Remote Control</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0f12;
+    --surface:  #141720;
+    --card:     #1a1e2a;
+    --border:   #2a2f3d;
+    --accent:   #3dd68c;
+    --warn:     #f0a83a;
+    --danger:   #e85555;
+    --info:     #4a9edd;
+    --text:     #e0e4ef;
+    --muted:    #6b738a;
+    --mono:     'Share Tech Mono', monospace;
+    --sans:     'Barlow', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .logo span { color: var(--muted); }
+  .conn-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #1a2a1a;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .conn-badge.connected { background: #1a2a1a; color: var(--accent); border-color: var(--accent); }
+  .conn-badge.disconnected { background: #2a1a1a; color: var(--danger); border-color: var(--danger); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 260px 1fr 280px;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-header .title { color: var(--text); font-size: 12px; }
+  .card-body { padding: 14px; }
+
+  /* CROSS SECTION */
+  #cs-canvas {
+    width: 100%;
+    border-radius: 4px;
+    display: block;
+  }
+
+  /* B-SCAN */
+  #bscan-canvas {
+    width: 100%;
+    display: block;
+    border-radius: 4px;
+  }
+
+  /* METRIC ROWS */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { color: var(--muted); font-size: 12px; }
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .v-none    { color: var(--accent); }
+  .v-possible{ color: var(--warn); }
+  .v-likely  { color: #e8754b; }
+  .v-major   { color: var(--danger); }
+
+  /* VERDICT BANNER */
+  .verdict-banner {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+  }
+
+  /* ROBOT CONTROLS */
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(3, 56px);
+    gap: 6px;
+    justify-content: center;
+    margin: 8px auto;
+  }
+  .dpad-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s, transform 0.1s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: #1e2d1e;
+    border-color: var(--accent);
+    transform: scale(0.95);
+  }
+  .dpad-btn.stop-btn {
+    background: #2a1a1a;
+    border-color: var(--danger);
+    color: var(--danger);
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+  .dpad-btn.stop-btn:active {
+    background: #3a1a1a;
+  }
+  .dpad-center { grid-column: 2; grid-row: 2; }
+
+  /* SPEED SLIDER */
+  .speed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .speed-row label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    min-width: 44px;
+  }
+  input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 4px;
+  }
+  .speed-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    min-width: 32px;
+    text-align: right;
+    color: var(--accent);
+  }
+
+  /* SCAN CONTROLS */
+  .scan-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .btn {
+    padding: 9px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover { background: #1e2230; }
+  .btn.btn-start { border-color: var(--accent); color: var(--accent); }
+  .btn.btn-start:hover { background: #0d1f14; }
+  .btn.btn-stop  { border-color: var(--danger); color: var(--danger); }
+  .btn.btn-stop:hover  { background: #1f0d0d; }
+  .btn.btn-save  { border-color: var(--info);   color: var(--info); }
+  .btn.btn-save:hover  { background: #0d1520; }
+  .btn.btn-pause { border-color: var(--warn);   color: var(--warn); }
+  .btn.btn-pause:hover { background: #201608; }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* SOURCE TOGGLE */
+  .source-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .src-btn {
+    flex: 1;
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .src-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #0d1f14;
+  }
+
+  /* LEAK SLIDER */
+  .leak-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .leak-row label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    min-width: 70px;
+  }
+
+  /* SCAN HISTORY */
+  .scan-list {
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .scan-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background: var(--surface);
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .scan-item .scan-time { color: var(--muted); }
+
+  /* STATUS BAR */
+  .status-bar {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .status-bar .sb-item { display: flex; gap: 6px; align-items: center; }
+  .status-bar .sb-val { color: var(--text); }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .status-dot.active { background: var(--accent); }
+  .status-dot.warn   { background: var(--warn); }
+  .status-dot.danger { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SFCW<span>—</span>GPR <span style="font-size:11px;margin-left:8px;">800–1200 MHz</span></div>
+  <div id="conn-badge" class="conn-badge disconnected">DISCONNECTED</div>
+</header>
+
+<div class="main">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="sb-item">
+      <div id="scan-dot" class="status-dot"></div>
+      <span id="sb-scan">idle</span>
+    </div>
+    <div class="sb-item">traces: <span id="sb-traces" class="sb-val">0</span></div>
+    <div class="sb-item">er: <span id="sb-er" class="sb-val">4.0</span></div>
+    <div class="sb-item">halo: <span id="sb-halo" class="sb-val">0.00</span></div>
+    <div class="sb-item">speed: <span id="sb-speed" class="sb-val">0</span></div>
+    <div class="sb-item">source: <span id="sb-source" class="sb-val">sim</span></div>
+    <div class="sb-item" style="margin-left:auto; color: var(--muted); font-size:10px;" id="sb-time">—</div>
+  </div>
+
+  <!-- PANEL A: CROSS SECTION -->
+  <div class="card">
+    <div class="card-header">
+      <span class="title">cross-section</span>
+      <span>panel A</span>
+    </div>
+    <div class="card-body" style="padding:10px;">
+      <canvas id="cs-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- PANEL B: B-SCAN -->
+  <div class="card">
+    <div class="card-header">
+      <span class="title">B-scan radargram</span>
+      <span>panel B</span>
+    </div>
+    <div class="card-body" style="padding:10px;">
+      <canvas id="bscan-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- PANEL C: LEAK INDICATOR -->
+  <div class="card">
+    <div class="card-header">
+      <span class="title">leak indicator</span>
+      <span>panel C</span>
+    </div>
+    <div class="card-body">
+      <div class="metric-row">
+        <span class="metric-label">pipe detected</span>
+        <span class="metric-value v-none" id="li-pipe">—</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">depth</span>
+        <span class="metric-value" id="li-depth">—</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">local er</span>
+        <span class="metric-value" id="li-er">4.0</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">moisture halo</span>
+        <span class="metric-value" id="li-halo">—</span>
+      </div>
+      <div id="verdict-banner" class="verdict-banner v-none">AWAITING DATA</div>
+    </div>
+  </div>
+
+  <!-- ROBOT CONTROLS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="title">robot controls</span>
+      <span>tank drive</span>
+    </div>
+    <div class="card-body">
+      <div class="speed-row" style="margin-bottom:10px;">
+        <label>speed</label>
+        <input type="range" id="speed-slider" min="10" max="100" value="50">
+        <span class="speed-val" id="speed-val">50</span>
+      </div>
+      <div class="dpad">
+        <div></div>
+        <div class="dpad-btn" id="btn-fwd"  data-dir="fwd">&#9650;</div>
+        <div></div>
+        <div class="dpad-btn" id="btn-left" data-dir="left">&#9668;</div>
+        <div class="dpad-btn stop-btn dpad-center" id="btn-stop">STOP</div>
+        <div class="dpad-btn" id="btn-right" data-dir="right">&#9658;</div>
+        <div></div>
+        <div class="dpad-btn" id="btn-back"  data-dir="back">&#9660;</div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN CONTROLS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="title">scan controls</span>
+      <span>GPR</span>
+    </div>
+    <div class="card-body">
+      <div class="source-row">
+        <div class="src-btn active" id="src-sim" onclick="setSource('sim')">simulation</div>
+        <div class="src-btn"        id="src-serial" onclick="setSource('serial')">hardware</div>
+      </div>
+      <div class="leak-row" id="leak-row">
+        <label>leak strength</label>
+        <input type="range" id="leak-slider" min="0" max="1" step="0.05" value="0.6">
+        <span class="speed-val" id="leak-val">0.60</span>
+      </div>
+      <div class="scan-btns">
+        <button class="btn btn-start" id="btn-scan-start" onclick="startScan()">start scan</button>
+        <button class="btn btn-stop"  id="btn-scan-stop"  onclick="stopScan()">stop scan</button>
+        <button class="btn btn-pause" id="btn-scan-pause" onclick="pauseScan()">pause</button>
+        <button class="btn btn-save"  id="btn-save"       onclick="saveScan()">save scan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN HISTORY -->
+  <div class="card">
+    <div class="card-header">
+      <span class="title">scan history</span>
+      <span id="scan-count">0 scans</span>
+    </div>
+    <div class="card-body" style="padding:10px;">
+      <div class="scan-list" id="scan-list">
+        <div style="color:var(--muted);font-size:11px;font-family:var(--mono);">no scans saved yet</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =============================================================================
+//  SOCKET CONNECTION
+// =============================================================================
+const socket = io();
+let scanning = false;
+let paused   = false;
+let nTraces  = 0;
+
+socket.on('connect', () => {
+  document.getElementById('conn-badge').textContent    = 'CONNECTED';
+  document.getElementById('conn-badge').className      = 'conn-badge connected';
+});
+socket.on('disconnect', () => {
+  document.getElementById('conn-badge').textContent    = 'DISCONNECTED';
+  document.getElementById('conn-badge').className      = 'conn-badge disconnected';
+});
+
+socket.on('status', data => updateStatus(data));
+
+socket.on('gpr_update', data => {
+  nTraces = data.trace_idx;
+  updateBscan(data.bscan, data.depth_axis);
+  updateLeakPanel(data);
+  updateStatusBar(data);
+  drawCrossSection(data);
+});
+
+socket.on('scan_saved', entry => addScanToHistory(entry));
+
+// =============================================================================
+//  ROBOT CONTROLS
+// =============================================================================
+let speedVal = 50;
+
+document.getElementById('speed-slider').oninput = e => {
+  speedVal = parseInt(e.target.value);
+  document.getElementById('speed-val').textContent = speedVal;
+};
+
+const dirMap = {
+  fwd:   { speed:  1, turn:  0 },
+  back:  { speed: -1, turn:  0 },
+  left:  { speed:  0, turn: -1 },
+  right: { speed:  0, turn:  1 },
+};
+
+document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
+  const dir = btn.dataset.dir;
+
+  btn.addEventListener('mousedown',  () => sendMove(dir));
+  btn.addEventListener('touchstart', e => { e.preventDefault(); sendMove(dir); });
+  btn.addEventListener('mouseup',    stopRobot);
+  btn.addEventListener('mouseleave', stopRobot);
+  btn.addEventListener('touchend',   stopRobot);
+});
+
+document.getElementById('btn-stop').addEventListener('click', stopRobot);
+
+function sendMove(dir) {
+  const d = dirMap[dir];
+  socket.emit('cmd_move', {
+    speed: d.speed * speedVal,
+    turn:  d.turn  * speedVal,
+  });
+}
+function stopRobot() {
+  socket.emit('cmd_stop');
+}
+
+// Keyboard controls
+const keyDir = { ArrowUp:'fwd', ArrowDown:'back', ArrowLeft:'left', ArrowRight:'right' };
+const pressed = {};
+document.addEventListener('keydown', e => {
+  if (keyDir[e.key] && !pressed[e.key]) {
+    pressed[e.key] = true;
+    sendMove(keyDir[e.key]);
+    document.getElementById('btn-'+keyDir[e.key])?.classList.add('pressed');
+  }
+  if (e.key === ' ') stopRobot();
+});
+document.addEventListener('keyup', e => {
+  if (keyDir[e.key]) {
+    delete pressed[e.key];
+    stopRobot();
+    document.getElementById('btn-'+keyDir[e.key])?.classList.remove('pressed');
+  }
+});
+
+// =============================================================================
+//  SCAN CONTROLS
+// =============================================================================
+function startScan() { scanning = true;  socket.emit('cmd_scan_start'); updateScanDot(); }
+function stopScan()  { scanning = false; socket.emit('cmd_scan_stop');  updateScanDot(); }
+function pauseScan() {
+  paused = !paused;
+  socket.emit('cmd_scan_pause');
+  document.getElementById('btn-scan-pause').textContent = paused ? 'resume' : 'pause';
+  updateScanDot();
+}
+function saveScan()  { socket.emit('cmd_save_scan'); }
+
+function updateScanDot() {
+  const dot = document.getElementById('scan-dot');
+  const lbl = document.getElementById('sb-scan');
+  if (scanning && !paused) { dot.className='status-dot active'; lbl.textContent='scanning'; }
+  else if (paused)          { dot.className='status-dot warn';   lbl.textContent='paused'; }
+  else                      { dot.className='status-dot';        lbl.textContent='idle'; }
+}
+
+function setSource(src) {
+  socket.emit('cmd_source', { source: src });
+  document.getElementById('src-sim').classList.toggle('active',    src==='sim');
+  document.getElementById('src-serial').classList.toggle('active', src==='serial');
+  document.getElementById('leak-row').style.display = src==='sim' ? 'flex' : 'none';
+  document.getElementById('sb-source').textContent = src;
+}
+
+document.getElementById('leak-slider').oninput = e => {
+  const v = parseFloat(e.target.value);
+  document.getElementById('leak-val').textContent = v.toFixed(2);
+  socket.emit('cmd_set_leak', { value: v });
+};
+
+// =============================================================================
+//  STATUS UPDATES
+// =============================================================================
+function updateStatus(data) {
+  if (data.scanning !== undefined) { scanning = data.scanning; updateScanDot(); }
+  if (data.paused   !== undefined) { paused   = data.paused;   updateScanDot(); }
+  if (data.robot_speed !== undefined)
+    document.getElementById('sb-speed').textContent = data.robot_speed;
+}
+
+function updateStatusBar(data) {
+  document.getElementById('sb-traces').textContent = data.trace_idx;
+  document.getElementById('sb-er').textContent     = data.er.toFixed(2);
+  document.getElementById('sb-halo').textContent   = data.halo.toFixed(3);
+  document.getElementById('sb-time').textContent   = new Date().toLocaleTimeString();
+}
+
+// =============================================================================
+//  LEAK PANEL
+// =============================================================================
+const sevColor = { none:'#3dd68c', possible:'#f0a83a', likely:'#e8754b', major:'#e85555' };
+
+function updateLeakPanel(data) {
+  const sc = sevColor[data.severity] || '#6b738a';
+  setEl('li-pipe',  data.pipe_detected ? `YES  z=${0.91}m` : 'searching...', sc);
+  setEl('li-depth', data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  setEl('li-er',    data.er.toFixed(2) + '  (dry=4.0)', sc);
+  setEl('li-halo',  data.halo.toFixed(3) + (data.halo > 0.3 ? '  elevated' : '  normal'),
+        data.halo > 0.3 ? sevColor.possible : '#6b738a');
+
+  const banner = document.getElementById('verdict-banner');
+  banner.textContent   = data.verdict.toUpperCase();
+  banner.style.color   = sc;
+  banner.style.borderColor = sc;
+  banner.style.background  = sc + '18';
+}
+
+function setEl(id, text, color) {
+  const el = document.getElementById(id);
+  el.textContent  = text;
+  el.style.color  = color;
+}
+
+// =============================================================================
+//  B-SCAN CANVAS
+// =============================================================================
+const bscanCanvas = document.getElementById('bscan-canvas');
+const bscanCtx    = bscanCanvas.getContext('2d');
+
+function updateBscan(bscan, depthAxis) {
+  const Nd = bscan.length;
+  const Nx = bscan[0].length;
+  bscanCanvas.width  = Nx;
+  bscanCanvas.height = Nd;
+  const imgData = bscanCtx.createImageData(Nx, Nd);
+
+  for (let id = 0; id < Nd; id++) {
+    for (let ix = 0; ix < Nx; ix++) {
+      const val  = Math.max(-40, Math.min(0, bscan[id][ix]));
+      const norm = (val + 40) / 40;
+      const pix  = Math.round(norm * 255);
+      const idx  = (id * Nx + ix) * 4;
+      imgData.data[idx]   = pix;
+      imgData.data[idx+1] = pix;
+      imgData.data[idx+2] = pix;
+      imgData.data[idx+3] = 255;
+    }
+  }
+  bscanCtx.putImageData(imgData, 0, 0);
+
+  // Depth axis labels
+  bscanCanvas.style.width  = '100%';
+  bscanCanvas.style.height = '220px';
+}
+
+// =============================================================================
+//  CROSS-SECTION CANVAS
+// =============================================================================
+const csCanvas = document.getElementById('cs-canvas');
+const csCtx    = csCanvas.getContext('2d');
+
+function drawCrossSection(data) {
+  const W = csCanvas.parentElement.clientWidth - 20;
+  const H = Math.round(W * 0.95);
+  csCanvas.width  = W;
+  csCanvas.height = H;
+
+  const GY   = Math.round(H * 0.20);
+  const SC   = H - GY;
+  const PPM  = SC / 1.5;
+  const pipY = GY + 0.91 * PPM;
+  const pipR = 0.06 * PPM;
+  const cx   = W / 2;
+
+  csCtx.fillStyle = '#e8e0d0';
+  csCtx.fillRect(0, 0, W, GY);
+  csCtx.fillStyle = '#b89a4e';
+  csCtx.fillRect(0, GY, W, SC);
+
+  for (let d = 0.25; d <= 1.4; d += 0.25) {
+    const ly = GY + d * PPM;
+    csCtx.strokeStyle = 'rgba(0,0,0,0.08)';
+    csCtx.lineWidth   = 0.5;
+    csCtx.setLineDash([3, 6]);
+    csCtx.beginPath(); csCtx.moveTo(0, ly); csCtx.lineTo(W, ly); csCtx.stroke();
+    csCtx.setLineDash([]);
+    csCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    csCtx.font      = '9px monospace';
+    csCtx.fillText(d.toFixed(2)+'m', W-32, ly+3);
+  }
+
+  const leak = data.leak_strength || 0;
+  const sev  = data.severity || 'none';
+  if (leak > 0.05 || sev !== 'none') {
+    const hr = pipR * (1.5 + leak * 1.8);
+    csCtx.beginPath();
+    csCtx.arc(cx, pipY, hr, 0, Math.PI*2);
+    csCtx.fillStyle = 'rgba(180,150,60,0.4)';
+    csCtx.fill();
+  }
+
+  csCtx.beginPath();
+  csCtx.arc(cx, pipY, pipR, 0, Math.PI*2);
+  csCtx.fillStyle = data.pipe_detected ? '#ffffff' : 'rgba(255,255,255,0.3)';
+  csCtx.fill();
+  csCtx.strokeStyle = '#2a4a3a';
+  csCtx.lineWidth   = 1.5;
+  csCtx.stroke();
+
+  if (data.pipe_detected) {
+    csCtx.beginPath();
+    csCtx.arc(cx, pipY, pipR+5, 0, Math.PI*2);
+    csCtx.strokeStyle = sevColor[sev] || '#3dd68c';
+    csCtx.lineWidth   = 2;
+    csCtx.stroke();
+  }
+
+  const rW = W * 0.32, rH = H * 0.09;
+  const rX = cx - rW/2, rY = GY - rH;
+  csCtx.fillStyle   = '#1a1a1a';
+  csCtx.strokeStyle = '#444';
+  csCtx.lineWidth   = 1;
+  csCtx.beginPath();
+  csCtx.roundRect(rX, rY, rW, rH, 3);
+  csCtx.fill(); csCtx.stroke();
+  csCtx.fillStyle = '#555';
+  csCtx.fillRect(rX-5, rY+3, 5, rH-6);
+  csCtx.fillRect(rX+rW, rY+3, 5, rH-6);
+  csCtx.fillStyle = '#444';
+  csCtx.fillRect(cx-rW*0.2, rY-8, rW*0.4, 8);
+  csCtx.fillStyle   = '#888';
+  csCtx.font        = '9px monospace';
+  csCtx.textAlign   = 'center';
+  csCtx.fillText('GPR', cx, rY + rH*0.65);
+  csCtx.textAlign = 'left';
+
+  csCtx.strokeStyle = 'rgba(0,0,0,0.12)';
+  csCtx.lineWidth   = 1;
+  csCtx.beginPath(); csCtx.moveTo(0, GY); csCtx.lineTo(W, GY); csCtx.stroke();
+}
+
+// =============================================================================
+//  SCAN HISTORY
+// =============================================================================
+let scanCount = 0;
+function addScanToHistory(entry) {
+  scanCount++;
+  document.getElementById('scan-count').textContent = scanCount + ' scan' + (scanCount!==1?'s':'');
+  const list = document.getElementById('scan-list');
+  if (list.children[0]?.style.color) list.innerHTML = '';
+  const sc = sevColor[entry.verdict] || '#6b738a';
+  const el = document.createElement('div');
+  el.className = 'scan-item';
+  el.innerHTML = `
+    <span class="scan-time">${entry.time.slice(9,15)}</span>
+    <span style="font-size:10px;color:var(--muted)">${entry.filename}</span>
+    <span style="color:${sc}">${entry.verdict}</span>
+  `;
+  list.prepend(el);
+}
+</script>
+</body>
+</html>
+
