@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFCW GPR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0d0f12;
+  --surface: #141720;
+  --card:    #1a1e2a;
+  --border:  #2a2f3d;
+  --accent:  #3dd68c;
+  --warn:    #f0a83a;
+  --danger:  #e85555;
+  --info:    #4a9edd;
+  --text:    #e0e4ef;
+  --muted:   #6b738a;
+  --mono:    'Share Tech Mono', monospace;
+  --sans:    'Barlow', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+
+/* ── HEADER ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: 2px; }
+.logo span { color: var(--muted); }
+.header-right { display: flex; gap: 10px; align-items: center; }
+.conn-badge {
+  font-family: var(--mono); font-size: 11px; padding: 3px 9px;
+  border-radius: 4px; border: 1px solid var(--border);
+  background: #1a2a1a; color: var(--muted);
+}
+.conn-badge.connected    { color: var(--accent); border-color: var(--accent); }
+.conn-badge.disconnected { background: #2a1a1a; color: var(--danger); border-color: var(--danger); }
+.mode-badge {
+  font-family: var(--mono); font-size: 11px; padding: 3px 9px;
+  border-radius: 4px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface); color: var(--muted);
+  transition: all 0.2s;
+}
+.mode-badge.viewer   { border-color: var(--info); color: var(--info); }
+.mode-badge.engineer { border-color: var(--warn); color: var(--warn); }
+
+/* ── STATUS BAR ── */
+.status-bar {
+  display: flex; gap: 14px; align-items: center;
+  padding: 6px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11px; color: var(--muted); flex-wrap: wrap;
+}
+.sb-item { display: flex; gap: 5px; align-items: center; }
+.sb-val  { color: var(--text); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.status-dot.active { background: var(--accent); animation: pulse 1.5s infinite; }
+.status-dot.warn   { background: var(--warn); }
+.status-dot.danger { background: var(--danger); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── PAGE VISIBILITY ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.card-header {
+  padding: 9px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-header .title { color: var(--text); font-size: 12px; }
+.card-body { padding: 14px; }
+
+/* ── TABS (only used inside the visual panel card) ── */
+.viz-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.viz-tab-btn {
+  font-family: var(--mono); font-size: 11px; padding: 9px 18px;
+  cursor: pointer; color: var(--muted); border: none; background: none;
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.5px;
+}
+.viz-tab-btn:hover  { color: var(--text); }
+.viz-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.viz-tab-pane { display: none; padding: 10px; }
+.viz-tab-pane.active { display: block; }
+
+/* ── ENGINEER GRID LAYOUTS ── */
+.eng-top {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 12px;
+  padding: 14px 16px 0;
+  max-width: 1500px; margin: 0 auto;
+}
+.eng-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px 16px 14px;
+  max-width: 1500px; margin: 0 auto;
+}
+
+/* ── VIEWER LAYOUT ── */
+.viewer-wrap { padding: 14px 16px; max-width: 900px; margin: 0 auto; }
+.viewer-summary {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px;
+}
+.vs-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px; text-align: center;
+}
+.vs-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 4px; }
+.vs-value { font-size: 18px; font-family: var(--mono); font-weight: 600; }
+
+/* ── VIEWER INNER TABS ── */
+.viewer-tab-bar {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface); border-radius: 8px 8px 0 0;
+}
+.viewer-tab-btn {
+  font-family: var(--mono); font-size: 11px; padding: 10px 20px;
+  cursor: pointer; color: var(--muted); border: none; background: none;
+  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.viewer-tab-btn:hover  { color: var(--text); }
+.viewer-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.viewer-tab-pane { display: none; }
+.viewer-tab-pane.active { display: block; }
+
+/* ── METRIC ROWS ── */
+.metric-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-label { color: var(--muted); font-size: 12px; }
+.metric-value { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+/* ── VERDICT BANNERS ── */
+.verdict-banner {
+  margin-top: 12px; padding: 12px; border-radius: 6px;
+  border: 1px solid var(--border); text-align: center;
+  font-family: var(--mono); font-size: 14px; letter-spacing: 2px; transition: all 0.4s;
+}
+.verdict-large {
+  margin-top: 14px; padding: 20px; border-radius: 8px;
+  text-align: center; font-family: var(--mono); font-size: 20px;
+  letter-spacing: 3px; border: 2px solid var(--border); transition: all 0.4s;
+}
+
+/* ── ROBOT DPAD ── */
+.dpad {
+  display: grid; grid-template-columns: repeat(3,58px);
+  grid-template-rows: repeat(3,58px); gap: 6px;
+  justify-content: center; margin: 10px auto 0;
+}
+.dpad-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 22px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, transform 0.1s;
+  user-select: none; -webkit-user-select: none;
+}
+.dpad-btn:active, .dpad-btn.pressed {
+  background: #1e2d1e; border-color: var(--accent); transform: scale(0.95);
+}
+.dpad-btn.stop-btn {
+  background: #2a1a1a; border-color: var(--danger);
+  color: var(--danger); font-size: 13px; font-family: var(--mono);
+}
+.dpad-center { grid-column: 2; grid-row: 2; }
+.speed-indicator {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px;
+}
+.si-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.si-val   { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 600; }
+.si-badge {
+  font-family: var(--mono); font-size: 10px; padding: 2px 7px;
+  border-radius: 3px; background: #0d1f14; color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.kbd-hint { text-align: center; font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 8px; }
+
+/* ── SCAN BUTTONS ── */
+.scan-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.btn {
+  padding: 9px 12px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-family: var(--mono); font-size: 12px; cursor: pointer;
+  letter-spacing: 0.5px; transition: background 0.15s;
+}
+.btn:hover         { background: #1e2230; }
+.btn.btn-start     { border-color: var(--accent); color: var(--accent); }
+.btn.btn-start:hover { background: #0d1f14; }
+.btn.btn-stop      { border-color: var(--danger); color: var(--danger); }
+.btn.btn-stop:hover  { background: #1f0d0d; }
+.btn.btn-save      { border-color: var(--info);   color: var(--info); }
+.btn.btn-save:hover  { background: #0d1520; }
+.btn.btn-pause     { border-color: var(--warn);   color: var(--warn); }
+.btn.btn-pause:hover { background: #201608; }
+
+/* ── SOURCE / LEAK ── */
+.source-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.src-btn {
+  flex: 1; padding: 6px; border-radius: 5px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); font-family: var(--mono); font-size: 11px;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.src-btn.active { border-color: var(--accent); color: var(--accent); background: #0d1f14; }
+.leak-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; background: var(--surface);
+  border-radius: 6px; border: 1px solid var(--border); margin-bottom: 8px;
+}
+.leak-row label { font-size: 11px; color: var(--muted); font-family: var(--mono); min-width: 70px; }
+input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
+.leak-val { font-family: var(--mono); font-size: 12px; min-width: 32px; text-align: right; color: var(--accent); }
+
+/* ── SCAN HISTORY ── */
+.scan-list { max-height: 200px; overflow-y: auto; }
+.scan-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;
+  background: var(--surface); font-size: 11px; font-family: var(--mono);
+}
+.scan-time { color: var(--muted); }
+
+/* ── CANVASES ── */
+#bscan-canvas {
+  width: 100%; display: block; border-radius: 4px;
+  image-rendering: pixelated; height: 300px;
+}
+#cs-canvas-eng, #cs-canvas-view {
+  width: 100%; border-radius: 4px; display: block;
+}
+
+/* ── PASSWORD MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 1000;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 28px 32px; width: 340px; text-align: center;
+}
+.modal-title { font-family: var(--mono); font-size: 14px; color: var(--accent); margin-bottom: 6px; letter-spacing: 1px; }
+.modal-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+.modal-input {
+  width: 100%; padding: 10px 12px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-family: var(--mono); font-size: 14px;
+  text-align: center; letter-spacing: 4px; margin-bottom: 10px; outline: none;
+}
+.modal-input:focus { border-color: var(--accent); }
+.modal-error { font-size: 11px; color: var(--danger); font-family: var(--mono); min-height: 16px; margin-bottom: 8px; }
+.modal-btns  { display: flex; gap: 8px; }
+.modal-btn {
+  flex: 1; padding: 9px; border-radius: 6px;
+  font-family: var(--mono); font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); transition: background 0.15s;
+}
+.modal-btn.confirm { border-color: var(--accent); color: var(--accent); }
+.modal-btn.confirm:hover { background: #0d1f14; }
+.modal-btn.cancel  { color: var(--muted); }
+.modal-btn.cancel:hover  { background: #1e2230; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD MODAL -->
+<div class="modal-overlay" id="pw-modal">
+  <div class="modal-box">
+    <div class="modal-title">ENGINEER MODE</div>
+    <div class="modal-sub">Enter password to access full controls</div>
+    <input class="modal-input" type="password" id="pw-input"
+           placeholder="••••••" maxlength="20"
+           onkeydown="if(event.key==='Enter') checkPassword()">
+    <div class="modal-error" id="pw-error"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel"  onclick="closeModal()">cancel</button>
+      <button class="modal-btn confirm" onclick="checkPassword()">enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">SFCW<span>—</span>GPR <span style="font-size:11px;margin-left:8px;">800–1200 MHz</span></div>
+  <div class="header-right">
+    <div id="conn-badge" class="conn-badge disconnected">DISCONNECTED</div>
+    <div id="mode-badge" class="mode-badge viewer" onclick="handleModeClick()">VIEWER MODE</div>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="sb-item">
+    <div id="scan-dot" class="status-dot"></div>
+    <span id="sb-scan">idle</span>
+  </div>
+  <div class="sb-item">traces: <span id="sb-traces" class="sb-val">0</span></div>
+  <div class="sb-item">er: <span id="sb-er" class="sb-val">4.0</span></div>
+  <div class="sb-item">halo: <span id="sb-halo" class="sb-val">0.000</span></div>
+  <div class="sb-item" id="sb-dir-item" style="display:none;">
+    direction: <span id="sb-dir" class="sb-val">stopped</span>
+  </div>
+  <div class="sb-item">source: <span id="sb-source" class="sb-val">sim</span></div>
+  <div class="sb-item" style="margin-left:auto;font-size:10px;" id="sb-time">—</div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════
+     VIEWER MODE PAGE
+     Shows: summary cards + tabbed (cross-section | leak indicator)
+════════════════════════════════════════════════ -->
+<div class="page active" id="page-viewer">
+  <div class="viewer-wrap">
+
+    <!-- Summary cards -->
+    <div class="viewer-summary">
+      <div class="vs-card">
+        <div class="vs-label">pipe detected</div>
+        <div class="vs-value" id="v-pipe" style="color:var(--muted);">—</div>
+      </div>
+      <div class="vs-card">
+        <div class="vs-label">depth</div>
+        <div class="vs-value" id="v-depth" style="color:var(--text);">—</div>
+      </div>
+      <div class="vs-card">
+        <div class="vs-label">verdict</div>
+        <div class="vs-value" id="v-verdict" style="color:var(--muted);font-size:13px;">awaiting data</div>
+      </div>
+    </div>
+
+    <!-- Tabbed card: cross-section | leak indicator -->
+    <div class="card">
+      <div class="viewer-tab-bar">
+        <button class="viewer-tab-btn active" onclick="switchViewerTab('crosssec', this)">cross-section</button>
+        <button class="viewer-tab-btn"        onclick="switchViewerTab('leak',     this)">leak indicator</button>
+      </div>
+
+      <!-- Cross-section pane -->
+      <div class="viewer-tab-pane active" id="vtab-crosssec">
+        <div style="padding:10px;">
+          <canvas id="cs-canvas-view"></canvas>
+        </div>
+      </div>
+
+      <!-- Leak indicator pane -->
+      <div class="viewer-tab-pane" id="vtab-leak">
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="metric-label">pipe detected</span>
+            <span class="metric-value" id="vli-pipe">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">estimated depth</span>
+            <span class="metric-value" id="vli-depth">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">local er estimate</span>
+            <span class="metric-value" id="vli-er">4.0</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">moisture halo score</span>
+            <span class="metric-value" id="vli-halo">—</span>
+          </div>
+          <div id="v-verdict-banner" class="verdict-large"
+               style="color:var(--muted);border-color:var(--border);">
+            AWAITING DATA
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end viewer tabbed card -->
+  </div>
+</div><!-- end page-viewer -->
+
+
+<!-- ════════════════════════════════════════════════
+     ENGINEER MODE PAGE
+     Top row:  visual panel (tabbed B-scan | cross-section) + leak indicator
+     Bottom row: robot controls | scan controls | scan history
+════════════════════════════════════════════════ -->
+<div class="page" id="page-engineer">
+
+  <!-- TOP ROW -->
+  <div class="eng-top">
+
+    <!-- Visual panel — tabbed B-scan / cross-section -->
+    <div style="grid-column:1/3;" class="card">
+      <div class="viz-tabs">
+        <button class="viz-tab-btn active" onclick="switchVizTab('bscan',    this)">B-scan radargram</button>
+        <button class="viz-tab-btn"        onclick="switchVizTab('crosssec', this)">cross-section</button>
+      </div>
+
+      <!-- B-scan pane -->
+      <div class="viz-tab-pane active" id="vtab-bscan">
+        <canvas id="bscan-canvas"></canvas>
+        <div style="display:flex;justify-content:space-between;padding:0 4px;
+                    font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;">
+          <span>← oldest</span>
+          <span style="font-size:10px;color:var(--muted);">depth 0 – 1.5 m</span>
+          <span>newest →</span>
+        </div>
+      </div>
+
+      <!-- Cross-section pane -->
+      <div class="viz-tab-pane" id="vtab-crosssec">
+        <canvas id="cs-canvas-eng"></canvas>
+      </div>
+
+    </div><!-- end visual panel -->
+
+  </div><!-- end eng-top -->
+
+  <!-- LEAK INDICATOR — always visible below visual panel, full width -->
+  <div style="padding: 0 16px; max-width:1500px; margin:12px auto 0;">
+    <div class="card">
+      <div class="card-header">
+        <span class="title">leak indicator</span>
+        <span style="font-size:10px;color:var(--muted);">live analysis</span>
+      </div>
+      <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div class="metric-row">
+            <span class="metric-label">pipe detected</span>
+            <span class="metric-value" id="eli-pipe">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">depth</span>
+            <span class="metric-value" id="eli-depth">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">local er estimate</span>
+            <span class="metric-value" id="eli-er">4.0</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">moisture halo</span>
+            <span class="metric-value" id="eli-halo">—</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;">
+          <div id="e-verdict-banner" class="verdict-banner"
+               style="color:var(--muted);border-color:var(--border);width:100%;">
+            AWAITING DATA
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW — robot controls | scan controls | scan history -->
+  <div class="eng-bottom">
+
+    <!-- Robot controls -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">robot controls</span>
+        <span>tank drive</span>
+      </div>
+      <div class="card-body">
+        <div class="speed-indicator">
+          <span class="si-label">drive speed</span>
+          <span class="si-val" id="si-speed-val">30 / 100</span>
+          <span class="si-badge">FIXED</span>
+        </div>
+        <div class="dpad">
+          <div></div>
+          <div class="dpad-btn" id="btn-fwd"   data-dir="fwd">&#9650;</div>
+          <div></div>
+          <div class="dpad-btn" id="btn-left"  data-dir="left">&#9668;</div>
+          <div class="dpad-btn stop-btn dpad-center" id="btn-stop">STOP</div>
+          <div class="dpad-btn" id="btn-right" data-dir="right">&#9658;</div>
+          <div></div>
+          <div class="dpad-btn" id="btn-back"  data-dir="back">&#9660;</div>
+          <div></div>
+        </div>
+        <div class="kbd-hint">arrow keys to move &nbsp;|&nbsp; space = stop</div>
+      </div>
+    </div>
+
+    <!-- Scan controls -->
+    <div class="card">
+      <div class="card-header"><span class="title">scan controls</span><span>GPR</span></div>
+      <div class="card-body">
+        <div class="source-row">
+          <div class="src-btn active" id="src-sim"   onclick="setSource('sim')">simulation</div>
+          <div class="src-btn"        id="src-serial" onclick="setSource('serial')">hardware</div>
+        </div>
+        <div class="leak-row" id="leak-row">
+          <label>leak strength</label>
+          <input type="range" id="leak-slider" min="0" max="1" step="0.05" value="0.6">
+          <span class="leak-val" id="leak-val">0.60</span>
+        </div>
+        <div class="scan-btns">
+          <button class="btn btn-start" onclick="startScan()">start scan</button>
+          <button class="btn btn-stop"  onclick="stopScan()">stop scan</button>
+          <button class="btn btn-pause" id="btn-scan-pause" onclick="pauseScan()">pause</button>
+          <button class="btn btn-save"  onclick="saveScan()">save scan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan history -->
+    <div class="card">
+      <div class="card-header">
+        <span class="title">scan history</span>
+        <span id="scan-count">0 scans</span>
+      </div>
+      <div class="card-body" style="padding:10px;">
+        <div class="scan-list" id="scan-list">
+          <div style="color:var(--muted);font-size:11px;font-family:var(--mono);">
+            no scans saved yet
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end eng-bottom -->
+
+</div><!-- end page-engineer -->
+
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  CONFIGURATION  — change these two values before deploying
+// ════════════════════════════════════════════════════════════
+const FIXED_SPEED       = 30;
+const ENGINEER_PASSWORD = 'gpr2024';
+
+document.getElementById('si-speed-val').textContent = FIXED_SPEED + ' / 100';
+
+// ════════════════════════════════════════════════════════════
+//  MODE MANAGEMENT
+// ════════════════════════════════════════════════════════════
+let currentMode = 'viewer';
+
+function handleModeClick() {
+  if (currentMode === 'viewer') {
+    openModal();
+  } else {
+    switchMode('viewer');
+  }
+}
+
+function openModal() {
+  document.getElementById('pw-modal').classList.add('open');
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').textContent = '';
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('pw-modal').classList.remove('open');
+}
+
+function checkPassword() {
+  const entered = document.getElementById('pw-input').value;
+  if (entered === ENGINEER_PASSWORD) {
+    closeModal();
+    switchMode('engineer');
+  } else {
+    document.getElementById('pw-error').textContent = 'incorrect password';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+    setTimeout(() => { document.getElementById('pw-error').textContent = ''; }, 2000);
+  }
+}
+
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('page-viewer').classList.toggle('active',   mode === 'viewer');
+  document.getElementById('page-engineer').classList.toggle('active', mode === 'engineer');
+  const badge = document.getElementById('mode-badge');
+  badge.textContent = mode === 'engineer' ? 'ENGINEER MODE' : 'VIEWER MODE';
+  badge.className   = 'mode-badge ' + mode;
+  document.getElementById('sb-dir-item').style.display = mode === 'engineer' ? 'flex' : 'none';
+}
+
+// ════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ════════════════════════════════════════════════════════════
+
+// Viewer tabs: cross-section | leak indicator
+function switchViewerTab(paneId, btn) {
+  document.querySelectorAll('.viewer-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.viewer-tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('vtab-' + paneId).classList.add('active');
+}
+
+// Engineer visual tabs: B-scan | cross-section
+function switchVizTab(paneId, btn) {
+  document.querySelectorAll('.viz-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.viz-tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('vtab-' + paneId).classList.add('active');
+}
+
+// ════════════════════════════════════════════════════════════
+//  SOCKET
+// ════════════════════════════════════════════════════════════
+const socket = io();
+let scanning = false;
+let paused   = false;
+
+socket.on('connect', () => {
+  const b = document.getElementById('conn-badge');
+  b.textContent = 'CONNECTED'; b.className = 'conn-badge connected';
+});
+socket.on('disconnect', () => {
+  const b = document.getElementById('conn-badge');
+  b.textContent = 'DISCONNECTED'; b.className = 'conn-badge disconnected';
+});
+socket.on('status',     data => updateStatus(data));
+socket.on('gpr_update', data => {
+  updateBscan(data.bscan);
+  updateLeakPanels(data);
+  updateViewerSummary(data);
+  updateStatusBar(data);
+  drawCrossSection('cs-canvas-view', data);
+  drawCrossSection('cs-canvas-eng',  data);
+});
+socket.on('scan_saved', entry => addScanToHistory(entry));
+
+// ════════════════════════════════════════════════════════════
+//  ROBOT CONTROLS
+// ════════════════════════════════════════════════════════════
+const dirMap   = { fwd:{speed:1,turn:0}, back:{speed:-1,turn:0}, left:{speed:0,turn:-1}, right:{speed:0,turn:1} };
+const dirLabel = { fwd:'forward', back:'reverse', left:'turning left', right:'turning right' };
+
+function sendMove(dir) {
+  const d = dirMap[dir];
+  socket.emit('cmd_move', { speed: d.speed*FIXED_SPEED, turn: d.turn*FIXED_SPEED });
+  document.getElementById('sb-dir').textContent = dirLabel[dir];
+}
+function stopRobot() {
+  socket.emit('cmd_stop');
+  document.getElementById('sb-dir').textContent = 'stopped';
+}
+
+document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
+  const dir = btn.dataset.dir;
+  btn.addEventListener('mousedown',  ()  => sendMove(dir));
+  btn.addEventListener('touchstart', e  => { e.preventDefault(); sendMove(dir); });
+  btn.addEventListener('mouseup',    ()  => stopRobot());
+  btn.addEventListener('mouseleave', ()  => stopRobot());
+  btn.addEventListener('touchend',   ()  => stopRobot());
+});
+document.getElementById('btn-stop').addEventListener('click', stopRobot);
+
+const keyDir = { ArrowUp:'fwd', ArrowDown:'back', ArrowLeft:'left', ArrowRight:'right' };
+const pressed = {};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); return; }
+  if (keyDir[e.key] && !pressed[e.key]) {
+    pressed[e.key] = true;
+    sendMove(keyDir[e.key]);
+    document.getElementById('btn-' + keyDir[e.key])?.classList.add('pressed');
+  }
+  if (e.key === ' ' && currentMode === 'engineer') { e.preventDefault(); stopRobot(); }
+});
+document.addEventListener('keyup', e => {
+  if (keyDir[e.key]) {
+    delete pressed[e.key];
+    stopRobot();
+    document.getElementById('btn-' + keyDir[e.key])?.classList.remove('pressed');
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  SCAN CONTROLS
+// ════════════════════════════════════════════════════════════
+function startScan() { scanning=true;  socket.emit('cmd_scan_start'); updateScanDot(); }
+function stopScan()  { scanning=false; socket.emit('cmd_scan_stop');  updateScanDot(); }
+function pauseScan() {
+  paused = !paused;
+  socket.emit('cmd_scan_pause');
+  document.getElementById('btn-scan-pause').textContent = paused ? 'resume' : 'pause';
+  updateScanDot();
+}
+function saveScan() { socket.emit('cmd_save_scan'); }
+
+function setSource(src) {
+  socket.emit('cmd_source', { source: src });
+  document.getElementById('src-sim').classList.toggle('active',    src==='sim');
+  document.getElementById('src-serial').classList.toggle('active', src==='serial');
+  document.getElementById('leak-row').style.display = src==='sim' ? 'flex' : 'none';
+  document.getElementById('sb-source').textContent  = src;
+}
+
+document.getElementById('leak-slider').oninput = e => {
+  const v = parseFloat(e.target.value);
+  document.getElementById('leak-val').textContent = v.toFixed(2);
+  socket.emit('cmd_set_leak', { value: v });
+};
+
+function updateScanDot() {
+  const dot = document.getElementById('scan-dot');
+  const lbl = document.getElementById('sb-scan');
+  if (scanning && !paused) { dot.className='status-dot active'; lbl.textContent='scanning'; }
+  else if (paused)          { dot.className='status-dot warn';   lbl.textContent='paused';   }
+  else                      { dot.className='status-dot';        lbl.textContent='idle';     }
+}
+
+function updateStatus(data) {
+  if (data.scanning !== undefined) { scanning=data.scanning; updateScanDot(); }
+  if (data.paused   !== undefined) { paused=data.paused;     updateScanDot(); }
+}
+function updateStatusBar(data) {
+  document.getElementById('sb-traces').textContent = data.trace_idx;
+  document.getElementById('sb-er').textContent     = data.er.toFixed(2);
+  document.getElementById('sb-halo').textContent   = data.halo.toFixed(3);
+  document.getElementById('sb-time').textContent   = new Date().toLocaleTimeString();
+}
+
+// ════════════════════════════════════════════════════════════
+//  SEVERITY COLORS
+// ════════════════════════════════════════════════════════════
+const sevColor = { none:'#3dd68c', possible:'#f0a83a', likely:'#e8754b', major:'#e85555' };
+
+function setEl(id, text, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = color;
+}
+
+// ════════════════════════════════════════════════════════════
+//  VIEWER SUMMARY CARDS
+// ════════════════════════════════════════════════════════════
+function updateViewerSummary(data) {
+  const sc = sevColor[data.severity] || '#6b738a';
+  setEl('v-pipe',    data.pipe_detected ? 'YES' : 'searching...', sc);
+  setEl('v-depth',   data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  setEl('v-verdict', data.verdict ? data.verdict.toUpperCase() : 'AWAITING', sc);
+
+  // also update viewer leak tab
+  setEl('vli-pipe',  data.pipe_detected ? 'YES  z=0.91m' : 'searching...', sc);
+  setEl('vli-depth', data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  setEl('vli-er',    data.er.toFixed(2) + '  (dry=4.0)', sc);
+  setEl('vli-halo',  data.halo.toFixed(3) + (data.halo>0.3?' elevated':' normal'),
+        data.halo>0.3 ? sevColor.possible : '#6b738a');
+  const vb = document.getElementById('v-verdict-banner');
+  if (vb) {
+    vb.textContent       = data.verdict ? data.verdict.toUpperCase() : 'AWAITING DATA';
+    vb.style.color       = sc;
+    vb.style.borderColor = sc;
+    vb.style.background  = sc + '18';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  ENGINEER LEAK PANEL
+// ════════════════════════════════════════════════════════════
+function updateLeakPanels(data) {
+  const sc = sevColor[data.severity] || '#6b738a';
+  setEl('eli-pipe',  data.pipe_detected ? 'YES  z=0.91m' : 'searching...', sc);
+  setEl('eli-depth', data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  setEl('eli-er',    data.er.toFixed(2) + '  (dry=4.0)', sc);
+  setEl('eli-halo',  data.halo.toFixed(3) + (data.halo>0.3?' elevated':' normal'),
+        data.halo>0.3 ? sevColor.possible : '#6b738a');
+  const eb = document.getElementById('e-verdict-banner');
+  if (eb) {
+    eb.textContent       = data.verdict ? data.verdict.toUpperCase() : 'AWAITING DATA';
+    eb.style.color       = sc;
+    eb.style.borderColor = sc;
+    eb.style.background  = sc + '18';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  B-SCAN CANVAS
+// ════════════════════════════════════════════════════════════
+const bscanCanvas = document.getElementById('bscan-canvas');
+const bscanCtx    = bscanCanvas.getContext('2d');
+
+function updateBscan(bscan) {
+  const Nd = bscan.length;
+  const Nx = bscan[0].length;
+  bscanCanvas.width  = Nx;
+  bscanCanvas.height = Nd;
+  const img = bscanCtx.createImageData(Nx, Nd);
+  for (let id = 0; id < Nd; id++) {
+    for (let ix = 0; ix < Nx; ix++) {
+      const v   = Math.max(-40, Math.min(0, bscan[id][ix]));
+      const pix = Math.round((v + 40) / 40 * 255);
+      const i   = (id * Nx + ix) * 4;
+      img.data[i] = img.data[i+1] = img.data[i+2] = pix;
+      img.data[i+3] = 255;
+    }
+  }
+  bscanCtx.putImageData(img, 0, 0);
+}
+
+// ════════════════════════════════════════════════════════════
+//  CROSS-SECTION  (shared renderer for both canvases)
+// ════════════════════════════════════════════════════════════
+function drawCrossSection(canvasId, data) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W   = Math.max(canvas.parentElement.clientWidth - 20, 100);
+  const H   = Math.round(W * 0.88);
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const GY  = Math.round(H * 0.20);
+  const SC  = H - GY;
+  const PPM = SC / 1.5;
+  const pipY = GY + 0.91 * PPM;
+  const pipR = 0.06 * PPM;
+  const cx   = W / 2;
+
+  // Sky + sand
+  ctx.fillStyle = '#e8e0d0'; ctx.fillRect(0, 0, W, GY);
+  ctx.fillStyle = '#b89a4e'; ctx.fillRect(0, GY, W, SC);
+
+  // Depth lines
+  for (let d = 0.25; d <= 1.4; d += 0.25) {
+    const ly = GY + d * PPM;
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 0.5;
+    ctx.setLineDash([3,6]);
+    ctx.beginPath(); ctx.moveTo(0,ly); ctx.lineTo(W,ly); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.font = '9px monospace';
+    ctx.fillText(d.toFixed(2)+'m', W-32, ly+3);
+  }
+
+  // Leak halo
+  const leak = data.leak_strength || 0;
+  const sev  = data.severity || 'none';
+  if (leak > 0.05 || sev !== 'none') {
+    ctx.beginPath();
+    ctx.arc(cx, pipY, pipR*(1.5+leak*1.8), 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(180,150,60,0.4)'; ctx.fill();
+  }
+
+  // Pipe
+  ctx.beginPath(); ctx.arc(cx, pipY, pipR, 0, Math.PI*2);
+  ctx.fillStyle   = data.pipe_detected ? '#ffffff' : 'rgba(255,255,255,0.3)';
+  ctx.fill();
+  ctx.strokeStyle = '#2a4a3a'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Detection ring
+  if (data.pipe_detected) {
+    ctx.beginPath(); ctx.arc(cx, pipY, pipR+5, 0, Math.PI*2);
+    ctx.strokeStyle = sevColor[sev]||'#3dd68c'; ctx.lineWidth=2; ctx.stroke();
+  }
+
+  // Robot body
+  const rW=W*0.32, rH=H*0.09, rX=cx-rW/2, rY=GY-rH;
+  ctx.fillStyle='#1a1a1a'; ctx.strokeStyle='#444'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(rX,rY,rW,rH,3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#555';
+  ctx.fillRect(rX-5,rY+3,5,rH-6); ctx.fillRect(rX+rW,rY+3,5,rH-6);
+  ctx.fillStyle='#444';
+  ctx.fillRect(cx-rW*0.2,rY-8,rW*0.4,8);
+  ctx.fillStyle='#888'; ctx.font='9px monospace';
+  ctx.textAlign='center'; ctx.fillText('GPR',cx,rY+rH*0.65); ctx.textAlign='left';
+
+  // Ground line
+  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,GY); ctx.lineTo(W,GY); ctx.stroke();
+}
+
+// ════════════════════════════════════════════════════════════
+//  SCAN HISTORY
+// ════════════════════════════════════════════════════════════
+let scanCount = 0;
+function addScanToHistory(entry) {
+  scanCount++;
+  document.getElementById('scan-count').textContent =
+    scanCount + ' scan' + (scanCount!==1?'s':'');
+  const list = document.getElementById('scan-list');
+  if (list.children[0]?.style?.color) list.innerHTML = '';
+  const sc = sevColor[entry.verdict]||'#6b738a';
+  const el = document.createElement('div');
+  el.className = 'scan-item';
+  el.innerHTML = `
+    <span class="scan-time">${entry.time.slice(9,15)}</span>
+    <span style="font-size:10px;color:var(--muted)">${entry.filename}</span>
+    <span style="color:${sc}">${entry.verdict}</span>`;
+  list.prepend(el);
+}
+</script>
+</body>
+</html>
