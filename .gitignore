@@ -1,0 +1,4 @@
+#venv files
+.venvLnx_App/
+.venvLnx_MoveSys/
+scans/
