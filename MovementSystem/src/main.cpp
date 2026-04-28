@@ -1,21 +1,20 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
 
-int VRx = 2; // analog
-int VRy = 1; // analog
+int VRx = 4; // analog
+int VRy = 5; // analog
 int SW  = 42; // digital
 
 // digital outputs
-int in1 = 36; // LF 
-int in2 = 35; // LB
-int enableA = 37;
+int in1 = 10; // LF 
+int in2 = 11; // LB
+int enableA = 12;
 
 // int in3 = 17; // RF
 // int in4 = 18; // RB
 // int enableB = 8;
-int in3 = 21; // RF
-int in4 = 47; // RB
-int enableB = 48;
+int in3 = 47; // RF
+int in4 = 48; // RB
+int enableB = 49;
 
 // int rMax = 4095;
 int rMax = 1024;
@@ -27,18 +26,7 @@ int deadBand = 200;
 int x = 0; 
 int y = 0; 
 
-void RGB_LED(){
-    #define RGB_PIN 48        // ESP32-S3-DevKitC onboard RGB
-    #define NUM_PIXELS 1
-    Adafruit_NeoPixel pixel(NUM_PIXELS, RGB_PIN, NEO_GRB + NEO_KHZ800);
-    pixel.begin();
-    pixel.setBrightness(50);
-    pixel.setPixelColor(0, pixel.Color(0, 50, 0)); // Green
-    pixel.show(); // turn off
-}
-
 void setup(){
-    RGB_LED();
     pinMode(in1, OUTPUT);
     pinMode(in2, OUTPUT);
     pinMode(enableA, OUTPUT);
