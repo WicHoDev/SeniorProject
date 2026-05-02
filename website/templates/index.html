@@ -565,6 +565,53 @@ input[type=range] {
 .btn-save:hover     { background: var(--info-dim); }
 
 /* ═══════════════════════════════════════════════
+   MOTOR MODE SWITCH
+═══════════════════════════════════════════════ */
+.motor-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.mode-switch {
+  display: flex;
+  gap: 3px;
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 2px;
+  border: 1px solid var(--border);
+}
+.mode-opt {
+  padding: 4px 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+  user-select: none;
+}
+.mode-opt:hover { color: var(--text); }
+.mode-opt.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  box-shadow: 0 0 6px rgba(0,229,160,0.25);
+}
+
+/* When in FULL mode, dim the speed selector */
+.speed-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: grayscale(0.7);
+}
+
+/* ═══════════════════════════════════════════════
    SPEED SELECTOR (8 discrete levels)
 ═══════════════════════════════════════════════ */
 .speed-selector {
@@ -1014,7 +1061,14 @@ input[type=range] {
           <span class="card-sub">tank drive</span>
         </div>
         <div class="card-body">
-          <div class="speed-row">
+          <div class="motor-mode-row">
+            <span class="speed-label">motor mode</span>
+            <div class="mode-switch">
+              <div class="mode-opt active" data-mode="pwm"  id="mode-pwm">PWM</div>
+              <div class="mode-opt"        data-mode="full" id="mode-full">FULL SPEED</div>
+            </div>
+          </div>
+          <div class="speed-row" id="speed-row-wrap">
             <span class="speed-label">drive speed (3-bit)</span>
             <span class="speed-val" id="si-speed-val">level 4 / 7</span>
             <span class="speed-badge" id="si-speed-pct">57%</span>
@@ -1133,7 +1187,29 @@ const ENGINEER_PASSWORD = 'gpr2024';
 // Speed levels match the ESP32's 3-bit speed table exactly
 // Level (0-7) → percent duty cycle on the motor PWM
 const SPEED_LEVELS = [0, 14, 28, 43, 57, 71, 86, 100];
-let currentSpeedLevel = 4;   // default = level 4 (57%)
+let currentSpeedLevel = 4;          // default = level 4 (57%)
+let motorMode         = 'pwm';      // 'pwm' = variable speed, 'full' = always 100%
+
+// ═══════════════════════════════════════════════════════════
+//  MOTOR MODE TOGGLE  (PWM ↔ FULL SPEED)
+// ═══════════════════════════════════════════════════════════
+function setMotorMode(mode) {
+  if (mode !== 'pwm' && mode !== 'full') return;
+  motorMode = mode;
+  // Update toggle visual
+  document.getElementById('mode-pwm').classList.toggle('active',  mode === 'pwm');
+  document.getElementById('mode-full').classList.toggle('active', mode === 'full');
+  // Dim or restore the speed selector
+  const sel = document.getElementById('speed-selector');
+  const row = document.getElementById('speed-row-wrap');
+  sel.classList.toggle('speed-disabled', mode === 'full');
+  row.classList.toggle('speed-disabled', mode === 'full');
+  // Tell the server
+  socket.emit('cmd_motor_mode', { mode });
+}
+
+document.getElementById('mode-pwm').addEventListener('click',  () => setMotorMode('pwm'));
+document.getElementById('mode-full').addEventListener('click', () => setMotorMode('full'));
 
 // ═══════════════════════════════════════════════════════════
 //  SPEED SELECTOR
@@ -1264,6 +1340,16 @@ socket.on('status', data => {
     p.className = 'pill' + (data.robot_connected ? ' connected' : '');
     t.textContent = data.robot_connected ? 'ROBOT OK' : 'ROBOT —';
   }
+  // Sync motor mode toggle when server pushes a state update
+  if (data.motor_mode !== undefined && data.motor_mode !== motorMode) {
+    motorMode = data.motor_mode;
+    document.getElementById('mode-pwm').classList.toggle('active',  motorMode === 'pwm');
+    document.getElementById('mode-full').classList.toggle('active', motorMode === 'full');
+    const sel = document.getElementById('speed-selector');
+    const row = document.getElementById('speed-row-wrap');
+    sel.classList.toggle('speed-disabled', motorMode === 'full');
+    row.classList.toggle('speed-disabled', motorMode === 'full');
+  }
 });
 
 socket.on('gpr_update', data => {
@@ -1285,20 +1371,23 @@ const dirLabel = { fwd:'forward', back:'reverse', left:'turning left', right:'tu
 
 function sendMove(dir) {
   const d = dirMap[dir];
-  const pct = SPEED_LEVELS[currentSpeedLevel];   // 0–100
+  // In FULL mode the server ignores speed levels — but we still send 100
+  // so the tank-mix produces correct direction bits and the GPIO monitor
+  // displays the same code (S2S1S0=111) the ESP32 will receive.
+  const pct = (motorMode === 'full') ? 100 : SPEED_LEVELS[currentSpeedLevel];
   const speed = d.speed * pct;
   const turn  = d.turn  * pct;
   socket.emit('cmd_move', { speed, turn });
   document.getElementById('sb-dir').textContent = dirLabel[dir];
 
   // Predict the GPIO state the Pi will set, mirror it on the monitor
-  // (mirrors the tank-mix logic in app_sim.py send_move())
+  // (mirrors the tank-mix logic in motor_control.py drive())
   const left  = Math.max(-100, Math.min(100, speed + turn));
   const right = Math.max(-100, Math.min(100, speed - turn));
   const dirL  = left  >= 0 ? 1 : 0;
   const dirR  = right >= 0 ? 1 : 0;
   const mag   = Math.max(Math.abs(left), Math.abs(right));
-  const lvl   = Math.min(7, Math.round(mag * 7 / 100));
+  const lvl   = (motorMode === 'full') ? 7 : Math.min(7, Math.round(mag * 7 / 100));
   updateGpioMonitor(1, dirL, dirR, lvl);
 }
 
