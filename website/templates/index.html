@@ -3,287 +3,819 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SFCW GPR</title>
+<title>SFCW GPR — Control Interface</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════ */
 :root {
-  --bg:      #0d0f12;
-  --surface: #141720;
-  --card:    #1a1e2a;
-  --border:  #2a2f3d;
-  --accent:  #3dd68c;
-  --warn:    #f0a83a;
-  --danger:  #e85555;
-  --info:    #4a9edd;
-  --text:    #e0e4ef;
-  --muted:   #6b738a;
-  --mono:    'Share Tech Mono', monospace;
-  --sans:    'Barlow', sans-serif;
+  --bg:        #080b0f;
+  --surface:   #0e1117;
+  --card:      #12161e;
+  --card2:     #161b26;
+  --border:    #1e2535;
+  --border2:   #252d40;
+  --accent:    #00e5a0;
+  --accent-dim:#005c41;
+  --warn:      #ffb340;
+  --warn-dim:  #4a330a;
+  --danger:    #ff4d6a;
+  --danger-dim:#4a0d18;
+  --info:      #38bfff;
+  --info-dim:  #0a2f45;
+  --text:      #d8dff0;
+  --muted:     #4a5470;
+  --muted2:    #6b7599;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Syne', sans-serif;
+  --radius:    6px;
+  --radius-lg: 10px;
 }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
 
-/* ── HEADER ── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* grid lines background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,160,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,160,0.018) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
 header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 20px; border-bottom: 1px solid var(--border);
-  background: var(--surface); position: sticky; top: 0; z-index: 100;
-}
-.logo { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: 2px; }
-.logo span { color: var(--muted); }
-.header-right { display: flex; gap: 10px; align-items: center; }
-.conn-badge {
-  font-family: var(--mono); font-size: 11px; padding: 3px 9px;
-  border-radius: 4px; border: 1px solid var(--border);
-  background: #1a2a1a; color: var(--muted);
-}
-.conn-badge.connected    { color: var(--accent); border-color: var(--accent); }
-.conn-badge.disconnected { background: #2a1a1a; color: var(--danger); border-color: var(--danger); }
-.mode-badge {
-  font-family: var(--mono); font-size: 11px; padding: 3px 9px;
-  border-radius: 4px; border: 1px solid var(--border);
-  cursor: pointer; background: var(--surface); color: var(--muted);
-  transition: all 0.2s;
-}
-.mode-badge.viewer   { border-color: var(--info); color: var(--info); }
-.mode-badge.engineer { border-color: var(--warn); color: var(--warn); }
-
-/* ── STATUS BAR ── */
-.status-bar {
-  display: flex; gap: 14px; align-items: center;
-  padding: 6px 20px; background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 50px;
+  background: rgba(8,11,15,0.92);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  font-family: var(--mono); font-size: 11px; color: var(--muted); flex-wrap: wrap;
 }
-.sb-item { display: flex; gap: 5px; align-items: center; }
-.sb-val  { color: var(--text); }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-.status-dot.active { background: var(--accent); animation: pulse 1.5s infinite; }
-.status-dot.warn   { background: var(--warn); }
-.status-dot.danger { background: var(--danger); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-/* ── PAGE VISIBILITY ── */
-.page { display: none; }
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent);
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--accent);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  font-weight: 400;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* status pills */
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted2);
+  transition: all 0.25s;
+}
+
+.pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.pill.connected    { color: var(--accent); border-color: var(--accent-dim); background: rgba(0,229,160,0.06); }
+.pill.connected .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.5s infinite; }
+.pill.disconnected { color: var(--danger); border-color: var(--danger-dim); background: rgba(255,77,106,0.06); }
+.pill.disconnected .dot { background: var(--danger); }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* mode toggle */
+.mode-toggle {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted2);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.mode-toggle:hover { border-color: var(--border2); color: var(--text); }
+.mode-toggle.viewer   { color: var(--info); border-color: var(--info); background: var(--info-dim); }
+.mode-toggle.engineer { color: var(--warn); border-color: var(--warn); background: var(--warn-dim); }
+
+/* ═══════════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════════ */
+.status-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 20px;
+  height: 34px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.sb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 14px; flex-shrink: 0; }
+
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sb-key { letter-spacing: 0.5px; }
+.sb-val { color: var(--text); font-weight: 500; }
+
+.scan-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+.scan-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 1.2s infinite; }
+.scan-dot.warn   { background: var(--warn); }
+.scan-dot.danger { background: var(--danger); }
+
+/* ═══════════════════════════════════════════════
+   PAGES
+═══════════════════════════════════════════════ */
+.page { display: none; position: relative; z-index: 1; }
 .page.active { display: block; }
 
-/* ── CARDS ── */
+/* ═══════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════ */
 .card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 8px; overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
-.card-header {
-  padding: 9px 14px; border-bottom: 1px solid var(--border);
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.card-header .title { color: var(--text); font-size: 12px; }
-.card-body { padding: 14px; }
 
-/* ── TABS (only used inside the visual panel card) ── */
-.viz-tabs {
-  display: flex; gap: 0;
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 10px;
 }
-.viz-tab-btn {
-  font-family: var(--mono); font-size: 11px; padding: 9px 18px;
-  cursor: pointer; color: var(--muted); border: none; background: none;
-  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+
+.card-title {
+  color: var(--text);
+  font-weight: 500;
   letter-spacing: 0.5px;
 }
-.viz-tab-btn:hover  { color: var(--text); }
-.viz-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.viz-tab-pane { display: none; padding: 10px; }
-.viz-tab-pane.active { display: block; }
 
-/* ── ENGINEER GRID LAYOUTS ── */
-.eng-top {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 12px;
-  padding: 14px 16px 0;
-  max-width: 1500px; margin: 0 auto;
-}
-.eng-bottom {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  padding: 12px 16px 14px;
-  max-width: 1500px; margin: 0 auto;
+.card-sub {
+  color: var(--muted);
+  letter-spacing: 0.3px;
 }
 
-/* ── VIEWER LAYOUT ── */
-.viewer-wrap { padding: 14px 16px; max-width: 900px; margin: 0 auto; }
-.viewer-summary {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px;
-}
-.vs-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 8px; padding: 12px 14px; text-align: center;
-}
-.vs-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 4px; }
-.vs-value { font-size: 18px; font-family: var(--mono); font-weight: 600; }
+.card-body { padding: 14px; }
 
-/* ── VIEWER INNER TABS ── */
-.viewer-tab-bar {
-  display: flex; gap: 0;
+/* ═══════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════ */
+.tab-bar {
+  display: flex;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
-  background: var(--surface); border-radius: 8px 8px 0 0;
 }
-.viewer-tab-btn {
-  font-family: var(--mono); font-size: 11px; padding: 10px 20px;
-  cursor: pointer; color: var(--muted); border: none; background: none;
-  border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
-}
-.viewer-tab-btn:hover  { color: var(--text); }
-.viewer-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.viewer-tab-pane { display: none; }
-.viewer-tab-pane.active { display: block; }
 
-/* ── METRIC ROWS ── */
+.tab-btn {
+  flex: 1;
+  padding: 9px 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ═══════════════════════════════════════════════
+   METRIC ROWS
+═══════════════════════════════════════════════ */
 .metric-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0; border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
 }
 .metric-row:last-child { border-bottom: none; }
-.metric-label { color: var(--muted); font-size: 12px; }
-.metric-value { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.metric-label { font-size: 11px; color: var(--muted2); font-family: var(--mono); }
+.metric-value { font-family: var(--mono); font-size: 12px; font-weight: 600; }
 
-/* ── VERDICT BANNERS ── */
+/* ═══════════════════════════════════════════════
+   VERDICT
+═══════════════════════════════════════════════ */
 .verdict-banner {
-  margin-top: 12px; padding: 12px; border-radius: 6px;
-  border: 1px solid var(--border); text-align: center;
-  font-family: var(--mono); font-size: 14px; letter-spacing: 2px; transition: all 0.4s;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  transition: all 0.4s;
 }
+
 .verdict-large {
-  margin-top: 14px; padding: 20px; border-radius: 8px;
-  text-align: center; font-family: var(--mono); font-size: 20px;
-  letter-spacing: 3px; border: 2px solid var(--border); transition: all 0.4s;
+  padding: 22px;
+  border-radius: var(--radius);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  border: 1px solid var(--border);
+  transition: all 0.4s;
+  margin-top: 14px;
 }
 
-/* ── ROBOT DPAD ── */
+/* ═══════════════════════════════════════════════
+   VIEWER PAGE
+═══════════════════════════════════════════════ */
+.viewer-wrap {
+  padding: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.viewer-summary {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.vs-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.vs-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--border);
+  transition: background 0.4s;
+}
+
+.vs-card.ok::before    { background: var(--accent); }
+.vs-card.warn::before  { background: var(--warn); }
+.vs-card.alert::before { background: var(--danger); }
+
+.vs-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.vs-value {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════
+   ENGINEER PAGE LAYOUT
+═══════════════════════════════════════════════ */
+.eng-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  padding: 14px 16px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.eng-visuals {
+  grid-column: 1 / 3;
+}
+
+.eng-sidebar { display: flex; flex-direction: column; gap: 12px; }
+.eng-main    { display: flex; flex-direction: column; gap: 12px; }
+
+/* ═══════════════════════════════════════════════
+   D-PAD
+═══════════════════════════════════════════════ */
+.dpad-wrap { margin: 10px 0; }
+
 .dpad {
-  display: grid; grid-template-columns: repeat(3,58px);
-  grid-template-rows: repeat(3,58px); gap: 6px;
-  justify-content: center; margin: 10px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 5px;
+  justify-content: center;
 }
+
 .dpad-btn {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--text); font-size: 22px;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: background 0.1s, transform 0.1s;
-  user-select: none; -webkit-user-select: none;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--muted2);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.dpad-btn:active, .dpad-btn.pressed {
-  background: #1e2d1e; border-color: var(--accent); transform: scale(0.95);
+
+.dpad-btn:active,
+.dpad-btn.pressed {
+  background: rgba(0,229,160,0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(0.94);
 }
-.dpad-btn.stop-btn {
-  background: #2a1a1a; border-color: var(--danger);
-  color: var(--danger); font-size: 13px; font-family: var(--mono);
+
+.dpad-stop {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
-.dpad-center { grid-column: 2; grid-row: 2; }
-.speed-indicator {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 7px 10px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px;
+
+.dpad-stop:active {
+  background: rgba(255,77,106,0.25) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
 }
-.si-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.si-val   { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 600; }
-.si-badge {
-  font-family: var(--mono); font-size: 10px; padding: 2px 7px;
-  border-radius: 3px; background: #0d1f14; color: var(--accent);
+
+.speed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.speed-label { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.speed-val   { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; }
+.speed-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  color: var(--accent);
   border: 1px solid var(--accent);
+  letter-spacing: 1px;
 }
-.kbd-hint { text-align: center; font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 8px; }
 
-/* ── SCAN BUTTONS ── */
-.scan-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.btn {
-  padding: 9px 12px; border-radius: 6px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text);
-  font-family: var(--mono); font-size: 12px; cursor: pointer;
-  letter-spacing: 0.5px; transition: background 0.15s;
+.kbd-hint {
+  text-align: center;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-top: 8px;
+  letter-spacing: 0.5px;
 }
-.btn:hover         { background: #1e2230; }
-.btn.btn-start     { border-color: var(--accent); color: var(--accent); }
-.btn.btn-start:hover { background: #0d1f14; }
-.btn.btn-stop      { border-color: var(--danger); color: var(--danger); }
-.btn.btn-stop:hover  { background: #1f0d0d; }
-.btn.btn-save      { border-color: var(--info);   color: var(--info); }
-.btn.btn-save:hover  { background: #0d1520; }
-.btn.btn-pause     { border-color: var(--warn);   color: var(--warn); }
-.btn.btn-pause:hover { background: #201608; }
 
-/* ── SOURCE / LEAK ── */
-.source-row { display: flex; gap: 6px; margin-bottom: 10px; }
+/* ═══════════════════════════════════════════════
+   SCAN CONTROLS
+═══════════════════════════════════════════════ */
+.source-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
 .src-btn {
-  flex: 1; padding: 6px; border-radius: 5px;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--muted); font-family: var(--mono); font-size: 11px;
-  cursor: pointer; text-align: center; transition: all 0.15s;
+  padding: 7px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  letter-spacing: 0.5px;
 }
-.src-btn.active { border-color: var(--accent); color: var(--accent); background: #0d1f14; }
-.leak-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; background: var(--surface);
-  border-radius: 6px; border: 1px solid var(--border); margin-bottom: 8px;
-}
-.leak-row label { font-size: 11px; color: var(--muted); font-family: var(--mono); min-width: 70px; }
-input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
-.leak-val { font-family: var(--mono); font-size: 12px; min-width: 32px; text-align: right; color: var(--accent); }
+.src-btn:hover { color: var(--text); }
+.src-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 
-/* ── SCAN HISTORY ── */
-.scan-list { max-height: 200px; overflow-y: auto; }
+.leak-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.leak-label { font-size: 10px; color: var(--muted); font-family: var(--mono); min-width: 68px; }
+input[type=range] {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 3px;
+  cursor: pointer;
+}
+.leak-val {
+  font-family: var(--mono);
+  font-size: 11px;
+  min-width: 30px;
+  text-align: right;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.scan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.btn {
+  padding: 9px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted2);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.btn:hover          { background: var(--card2); color: var(--text); }
+.btn-start          { border-color: var(--accent); color: var(--accent); }
+.btn-start:hover    { background: var(--accent-dim); }
+.btn-stop           { border-color: var(--danger); color: var(--danger); }
+.btn-stop:hover     { background: var(--danger-dim); }
+.btn-pause          { border-color: var(--warn); color: var(--warn); }
+.btn-pause:hover    { background: var(--warn-dim); }
+.btn-save           { border-color: var(--info); color: var(--info); }
+.btn-save:hover     { background: var(--info-dim); }
+
+/* ═══════════════════════════════════════════════
+   SPEED SELECTOR (8 discrete levels)
+═══════════════════════════════════════════════ */
+.speed-selector {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  margin: 8px 0 10px;
+}
+.speed-cell {
+  padding: 6px 0;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 9px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+}
+.speed-cell:hover { color: var(--text); }
+.speed-cell.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 8px rgba(0,229,160,0.3);
+}
+
+/* ═══════════════════════════════════════════════
+   GPIO MONITOR
+═══════════════════════════════════════════════ */
+.gpio-monitor {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.gpio-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.gpio-pin.high {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(0,229,160,0.4);
+}
+.gpio-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.gpio-pin.high .gpio-label { color: var(--accent); }
+.gpio-led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: all 0.15s;
+}
+.gpio-pin.high .gpio-led {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+.gpio-bit {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.gpio-pin.high .gpio-bit { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════
+   SCAN HISTORY
+═══════════════════════════════════════════════ */
+.scan-list { max-height: 180px; overflow-y: auto; }
+
 .scan-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 8px; border-radius: 4px; margin-bottom: 4px;
-  background: var(--surface); font-size: 11px; font-family: var(--mono);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  margin-bottom: 4px;
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 10px;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
 }
+
+.scan-item:hover { border-color: var(--border2); }
+
 .scan-time { color: var(--muted); }
+.scan-file { color: var(--muted2); font-size: 9px; }
 
-/* ── CANVASES ── */
+/* ═══════════════════════════════════════════════
+   CANVASES
+═══════════════════════════════════════════════ */
 #bscan-canvas {
-  width: 100%; display: block; border-radius: 4px;
-  image-rendering: pixelated; height: 300px;
-}
-#cs-canvas-eng, #cs-canvas-view {
-  width: 100%; border-radius: 4px; display: block;
+  width: 100%;
+  display: block;
+  border-radius: var(--radius);
+  image-rendering: pixelated;
+  height: 280px;
 }
 
-/* ── PASSWORD MODAL ── */
+#cs-canvas-eng,
+#cs-canvas-view {
+  width: 100%;
+  border-radius: var(--radius);
+  display: block;
+}
+
+.canvas-meta {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
 .modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.75); z-index: 1000;
-  align-items: center; justify-content: center;
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
 }
 .modal-overlay.open { display: flex; }
+
 .modal-box {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 28px 32px; width: 340px; text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 32px;
+  width: 360px;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,179,64,0.1);
 }
-.modal-title { font-family: var(--mono); font-size: 14px; color: var(--accent); margin-bottom: 6px; letter-spacing: 1px; }
-.modal-sub   { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+.modal-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.modal-title {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--warn);
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+.modal-sub {
+  font-size: 12px;
+  color: var(--muted2);
+  margin-bottom: 22px;
+}
+
 .modal-input {
-  width: 100%; padding: 10px 12px; border-radius: 6px;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); font-family: var(--mono); font-size: 14px;
-  text-align: center; letter-spacing: 4px; margin-bottom: 10px; outline: none;
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 6px;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color 0.2s;
 }
-.modal-input:focus { border-color: var(--accent); }
-.modal-error { font-size: 11px; color: var(--danger); font-family: var(--mono); min-height: 16px; margin-bottom: 8px; }
-.modal-btns  { display: flex; gap: 8px; }
+.modal-input:focus { border-color: var(--warn); }
+
+.modal-error {
+  font-size: 10px;
+  color: var(--danger);
+  font-family: var(--mono);
+  min-height: 16px;
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
+}
+
+.modal-btns { display: flex; gap: 8px; }
+
 .modal-btn {
-  flex: 1; padding: 9px; border-radius: 6px;
-  font-family: var(--mono); font-size: 12px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); transition: background 0.15s;
+  flex: 1;
+  padding: 11px;
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted2);
+  letter-spacing: 1px;
+  transition: all 0.15s;
 }
-.modal-btn.confirm { border-color: var(--accent); color: var(--accent); }
-.modal-btn.confirm:hover { background: #0d1f14; }
-.modal-btn.cancel  { color: var(--muted); }
-.modal-btn.cancel:hover  { background: #1e2230; }
+.modal-btn:hover { background: var(--card2); }
+.modal-confirm { border-color: var(--warn); color: var(--warn); }
+.modal-confirm:hover { background: var(--warn-dim); }
+
+/* ═══════════════════════════════════════════════
+   LEAK INDICATOR PANEL
+═══════════════════════════════════════════════ */
+.leak-indicator-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .eng-layout {
+    grid-template-columns: 1fr;
+  }
+  .eng-visuals { grid-column: 1; }
+  .viewer-summary { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .viewer-summary { grid-template-columns: 1fr; }
+  .leak-indicator-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -291,6 +823,7 @@ input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
 <!-- PASSWORD MODAL -->
 <div class="modal-overlay" id="pw-modal">
   <div class="modal-box">
+    <div class="modal-icon">🔐</div>
     <div class="modal-title">ENGINEER MODE</div>
     <div class="modal-sub">Enter password to access full controls</div>
     <input class="modal-input" type="password" id="pw-input"
@@ -298,77 +831,90 @@ input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
            onkeydown="if(event.key==='Enter') checkPassword()">
     <div class="modal-error" id="pw-error"></div>
     <div class="modal-btns">
-      <button class="modal-btn cancel"  onclick="closeModal()">cancel</button>
-      <button class="modal-btn confirm" onclick="checkPassword()">enter</button>
+      <button class="modal-btn" onclick="closeModal()">cancel</button>
+      <button class="modal-btn modal-confirm" onclick="checkPassword()">ENTER</button>
     </div>
   </div>
 </div>
 
 <!-- HEADER -->
 <header>
-  <div class="logo">SFCW<span>—</span>GPR <span style="font-size:11px;margin-left:8px;">800–1200 MHz</span></div>
+  <div class="logo">
+    <div class="logo-icon">G</div>
+    <div>
+      SFCW‑GPR
+      <div class="logo-sub">800–1200 MHz · TANK ROBOT</div>
+    </div>
+  </div>
+
   <div class="header-right">
-    <div id="conn-badge" class="conn-badge disconnected">DISCONNECTED</div>
-    <div id="mode-badge" class="mode-badge viewer" onclick="handleModeClick()">VIEWER MODE</div>
+    <div class="pill" id="robot-pill">
+      <div class="dot"></div>
+      <span id="robot-pill-txt">ROBOT —</span>
+    </div>
+    <div class="pill disconnected" id="conn-pill">
+      <div class="dot"></div>
+      <span id="conn-pill-txt">DISCONNECTED</span>
+    </div>
+    <div class="mode-toggle viewer" id="mode-toggle" onclick="handleModeClick()">VIEWER</div>
   </div>
 </header>
 
 <!-- STATUS BAR -->
 <div class="status-bar">
   <div class="sb-item">
-    <div id="scan-dot" class="status-dot"></div>
+    <div class="scan-dot" id="scan-dot"></div>
     <span id="sb-scan">idle</span>
   </div>
-  <div class="sb-item">traces: <span id="sb-traces" class="sb-val">0</span></div>
-  <div class="sb-item">er: <span id="sb-er" class="sb-val">4.0</span></div>
-  <div class="sb-item">halo: <span id="sb-halo" class="sb-val">0.000</span></div>
-  <div class="sb-item" id="sb-dir-item" style="display:none;">
-    direction: <span id="sb-dir" class="sb-val">stopped</span>
-  </div>
-  <div class="sb-item">source: <span id="sb-source" class="sb-val">sim</span></div>
-  <div class="sb-item" style="margin-left:auto;font-size:10px;" id="sb-time">—</div>
+  <div class="sb-sep"></div>
+  <div class="sb-item"><span class="sb-key">traces</span><span class="sb-val" id="sb-traces">0</span></div>
+  <div class="sb-sep"></div>
+  <div class="sb-item"><span class="sb-key">εr</span><span class="sb-val" id="sb-er">4.0</span></div>
+  <div class="sb-sep"></div>
+  <div class="sb-item"><span class="sb-key">halo</span><span class="sb-val" id="sb-halo">0.000</span></div>
+  <div class="sb-sep"></div>
+  <div class="sb-item"><span class="sb-key">source</span><span class="sb-val" id="sb-source">sim</span></div>
+  <div class="sb-sep" id="sb-dir-sep" style="display:none;"></div>
+  <div class="sb-item" id="sb-dir-item" style="display:none;"><span class="sb-key">direction</span><span class="sb-val" id="sb-dir">stopped</span></div>
+  <div class="sb-sep" style="margin-left:auto;"></div>
+  <div class="sb-item" id="sb-time">—</div>
 </div>
 
 
-<!-- ════════════════════════════════════════════════
-     VIEWER MODE PAGE
-     Shows: summary cards + tabbed (cross-section | leak indicator)
-════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════
+     VIEWER PAGE
+═══════════════════════════════════════════ -->
 <div class="page active" id="page-viewer">
   <div class="viewer-wrap">
 
-    <!-- Summary cards -->
     <div class="viewer-summary">
-      <div class="vs-card">
+      <div class="vs-card" id="vc-pipe">
         <div class="vs-label">pipe detected</div>
         <div class="vs-value" id="v-pipe" style="color:var(--muted);">—</div>
       </div>
-      <div class="vs-card">
+      <div class="vs-card" id="vc-depth">
         <div class="vs-label">depth</div>
         <div class="vs-value" id="v-depth" style="color:var(--text);">—</div>
       </div>
-      <div class="vs-card">
+      <div class="vs-card" id="vc-verdict">
         <div class="vs-label">verdict</div>
-        <div class="vs-value" id="v-verdict" style="color:var(--muted);font-size:13px;">awaiting data</div>
+        <div class="vs-value" id="v-verdict" style="color:var(--muted);font-size:12px;">awaiting data</div>
       </div>
     </div>
 
-    <!-- Tabbed card: cross-section | leak indicator -->
     <div class="card">
-      <div class="viewer-tab-bar">
-        <button class="viewer-tab-btn active" onclick="switchViewerTab('crosssec', this)">cross-section</button>
-        <button class="viewer-tab-btn"        onclick="switchViewerTab('leak',     this)">leak indicator</button>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('viewer','crosssec',this)">cross-section</button>
+        <button class="tab-btn"        onclick="switchTab('viewer','leak',this)">leak indicator</button>
       </div>
 
-      <!-- Cross-section pane -->
-      <div class="viewer-tab-pane active" id="vtab-crosssec">
+      <div class="tab-pane active" id="viewer-crosssec">
         <div style="padding:10px;">
           <canvas id="cs-canvas-view"></canvas>
         </div>
       </div>
 
-      <!-- Leak indicator pane -->
-      <div class="viewer-tab-pane" id="vtab-leak">
+      <div class="tab-pane" id="viewer-leak">
         <div class="card-body">
           <div class="metric-row">
             <span class="metric-label">pipe detected</span>
@@ -379,190 +925,263 @@ input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
             <span class="metric-value" id="vli-depth">—</span>
           </div>
           <div class="metric-row">
-            <span class="metric-label">local er estimate</span>
+            <span class="metric-label">local εr estimate</span>
             <span class="metric-value" id="vli-er">4.0</span>
           </div>
           <div class="metric-row">
             <span class="metric-label">moisture halo score</span>
             <span class="metric-value" id="vli-halo">—</span>
           </div>
-          <div id="v-verdict-banner" class="verdict-large"
-               style="color:var(--muted);border-color:var(--border);">
+          <div class="verdict-large" id="v-verdict-banner" style="color:var(--muted);border-color:var(--border);">
             AWAITING DATA
           </div>
         </div>
       </div>
+    </div>
 
-    </div><!-- end viewer tabbed card -->
   </div>
-</div><!-- end page-viewer -->
+</div>
 
 
-<!-- ════════════════════════════════════════════════
-     ENGINEER MODE PAGE
-     Top row:  visual panel (tabbed B-scan | cross-section) + leak indicator
-     Bottom row: robot controls | scan controls | scan history
-════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════
+     ENGINEER PAGE
+═══════════════════════════════════════════ -->
 <div class="page" id="page-engineer">
+  <div class="eng-layout">
 
-  <!-- TOP ROW -->
-  <div class="eng-top">
-
-    <!-- Visual panel — tabbed B-scan / cross-section -->
-    <div style="grid-column:1/3;" class="card">
-      <div class="viz-tabs">
-        <button class="viz-tab-btn active" onclick="switchVizTab('bscan',    this)">B-scan radargram</button>
-        <button class="viz-tab-btn"        onclick="switchVizTab('crosssec', this)">cross-section</button>
+    <!-- Visuals span full width -->
+    <div class="eng-visuals card">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('eng','bscan',this)">B-scan radargram</button>
+        <button class="tab-btn"        onclick="switchTab('eng','crosssec',this)">cross-section</button>
       </div>
 
-      <!-- B-scan pane -->
-      <div class="viz-tab-pane active" id="vtab-bscan">
+      <div class="tab-pane active" id="eng-bscan" style="padding:10px;">
         <canvas id="bscan-canvas"></canvas>
-        <div style="display:flex;justify-content:space-between;padding:0 4px;
-                    font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;">
-          <span>← oldest</span>
-          <span style="font-size:10px;color:var(--muted);">depth 0 – 1.5 m</span>
-          <span>newest →</span>
+        <div class="canvas-meta">
+          <span>← oldest trace</span>
+          <span>depth: 0 – 1.5 m</span>
+          <span>newest trace →</span>
         </div>
       </div>
 
-      <!-- Cross-section pane -->
-      <div class="viz-tab-pane" id="vtab-crosssec">
+      <div class="tab-pane" id="eng-crosssec" style="padding:10px;">
         <canvas id="cs-canvas-eng"></canvas>
       </div>
+    </div>
 
-    </div><!-- end visual panel -->
-
-  </div><!-- end eng-top -->
-
-  <!-- LEAK INDICATOR — always visible below visual panel, full width -->
-  <div style="padding: 0 16px; max-width:1500px; margin:12px auto 0;">
-    <div class="card">
+    <!-- Leak indicator: full width below visuals -->
+    <div style="grid-column:1/3;" class="card">
       <div class="card-header">
-        <span class="title">leak indicator</span>
-        <span style="font-size:10px;color:var(--muted);">live analysis</span>
+        <span class="card-title">leak indicator</span>
+        <span class="card-sub">live analysis</span>
       </div>
-      <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div>
-          <div class="metric-row">
-            <span class="metric-label">pipe detected</span>
-            <span class="metric-value" id="eli-pipe">—</span>
+      <div class="card-body">
+        <div class="leak-indicator-grid">
+          <div>
+            <div class="metric-row">
+              <span class="metric-label">pipe detected</span>
+              <span class="metric-value" id="eli-pipe">—</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">depth</span>
+              <span class="metric-value" id="eli-depth">—</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">local εr estimate</span>
+              <span class="metric-value" id="eli-er">4.0</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">moisture halo</span>
+              <span class="metric-value" id="eli-halo">—</span>
+            </div>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">depth</span>
-            <span class="metric-value" id="eli-depth">—</span>
-          </div>
-          <div class="metric-row">
-            <span class="metric-label">local er estimate</span>
-            <span class="metric-value" id="eli-er">4.0</span>
-          </div>
-          <div class="metric-row">
-            <span class="metric-label">moisture halo</span>
-            <span class="metric-value" id="eli-halo">—</span>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;">
-          <div id="e-verdict-banner" class="verdict-banner"
-               style="color:var(--muted);border-color:var(--border);width:100%;">
-            AWAITING DATA
+          <div style="display:flex;align-items:center;">
+            <div class="verdict-banner" id="e-verdict-banner"
+                 style="color:var(--muted);border-color:var(--border);width:100%;">
+              AWAITING DATA
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- BOTTOM ROW — robot controls | scan controls | scan history -->
-  <div class="eng-bottom">
 
     <!-- Robot controls -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">robot controls</span>
-        <span>tank drive</span>
-      </div>
-      <div class="card-body">
-        <div class="speed-indicator">
-          <span class="si-label">drive speed</span>
-          <span class="si-val" id="si-speed-val">30 / 100</span>
-          <span class="si-badge">FIXED</span>
+    <div class="eng-sidebar">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">robot controls</span>
+          <span class="card-sub">tank drive</span>
         </div>
-        <div class="dpad">
-          <div></div>
-          <div class="dpad-btn" id="btn-fwd"   data-dir="fwd">&#9650;</div>
-          <div></div>
-          <div class="dpad-btn" id="btn-left"  data-dir="left">&#9668;</div>
-          <div class="dpad-btn stop-btn dpad-center" id="btn-stop">STOP</div>
-          <div class="dpad-btn" id="btn-right" data-dir="right">&#9658;</div>
-          <div></div>
-          <div class="dpad-btn" id="btn-back"  data-dir="back">&#9660;</div>
-          <div></div>
-        </div>
-        <div class="kbd-hint">arrow keys to move &nbsp;|&nbsp; space = stop</div>
-      </div>
-    </div>
-
-    <!-- Scan controls -->
-    <div class="card">
-      <div class="card-header"><span class="title">scan controls</span><span>GPR</span></div>
-      <div class="card-body">
-        <div class="source-row">
-          <div class="src-btn active" id="src-sim"   onclick="setSource('sim')">simulation</div>
-          <div class="src-btn"        id="src-serial" onclick="setSource('serial')">hardware</div>
-        </div>
-        <div class="leak-row" id="leak-row">
-          <label>leak strength</label>
-          <input type="range" id="leak-slider" min="0" max="1" step="0.05" value="0.6">
-          <span class="leak-val" id="leak-val">0.60</span>
-        </div>
-        <div class="scan-btns">
-          <button class="btn btn-start" onclick="startScan()">start scan</button>
-          <button class="btn btn-stop"  onclick="stopScan()">stop scan</button>
-          <button class="btn btn-pause" id="btn-scan-pause" onclick="pauseScan()">pause</button>
-          <button class="btn btn-save"  onclick="saveScan()">save scan</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Scan history -->
-    <div class="card">
-      <div class="card-header">
-        <span class="title">scan history</span>
-        <span id="scan-count">0 scans</span>
-      </div>
-      <div class="card-body" style="padding:10px;">
-        <div class="scan-list" id="scan-list">
-          <div style="color:var(--muted);font-size:11px;font-family:var(--mono);">
-            no scans saved yet
+        <div class="card-body">
+          <div class="speed-row">
+            <span class="speed-label">drive speed (3-bit)</span>
+            <span class="speed-val" id="si-speed-val">level 4 / 7</span>
+            <span class="speed-badge" id="si-speed-pct">57%</span>
+          </div>
+          <div class="speed-selector" id="speed-selector">
+            <div class="speed-cell"        data-level="0">0</div>
+            <div class="speed-cell"        data-level="1">1</div>
+            <div class="speed-cell"        data-level="2">2</div>
+            <div class="speed-cell"        data-level="3">3</div>
+            <div class="speed-cell active" data-level="4">4</div>
+            <div class="speed-cell"        data-level="5">5</div>
+            <div class="speed-cell"        data-level="6">6</div>
+            <div class="speed-cell"        data-level="7">7</div>
+          </div>
+          <div class="dpad-wrap">
+            <div class="dpad">
+              <div></div>
+              <div class="dpad-btn" id="btn-fwd"   data-dir="fwd">▲</div>
+              <div></div>
+              <div class="dpad-btn" id="btn-left"  data-dir="left">◀</div>
+              <div class="dpad-btn dpad-stop" id="btn-stop">STOP</div>
+              <div class="dpad-btn" id="btn-right" data-dir="right">▶</div>
+              <div></div>
+              <div class="dpad-btn" id="btn-back"  data-dir="back">▼</div>
+              <div></div>
+            </div>
+          </div>
+          <div class="kbd-hint">arrow keys to move &nbsp;|&nbsp; space = stop &nbsp;|&nbsp; 0–7 = speed</div>
+          <div class="gpio-monitor" id="gpio-monitor">
+            <div class="gpio-pin" id="gpio-en">
+              <span class="gpio-label">EN</span>
+              <span class="gpio-led"></span>
+              <span class="gpio-bit">0</span>
+            </div>
+            <div class="gpio-pin" id="gpio-dl">
+              <span class="gpio-label">DIR_L</span>
+              <span class="gpio-led"></span>
+              <span class="gpio-bit">0</span>
+            </div>
+            <div class="gpio-pin" id="gpio-dr">
+              <span class="gpio-label">DIR_R</span>
+              <span class="gpio-led"></span>
+              <span class="gpio-bit">0</span>
+            </div>
+            <div class="gpio-pin" id="gpio-s0">
+              <span class="gpio-label">S0</span>
+              <span class="gpio-led"></span>
+              <span class="gpio-bit">0</span>
+            </div>
+            <div class="gpio-pin" id="gpio-s1">
+              <span class="gpio-label">S1</span>
+              <span class="gpio-led"></span>
+              <span class="gpio-bit">0</span>
+            </div>
+            <div class="gpio-pin" id="gpio-s2">
+              <span class="gpio-label">S2</span>
+              <span class="gpio-led"></span>
+              <span class="gpio-bit">0</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-  </div><!-- end eng-bottom -->
+    <!-- Scan controls + history -->
+    <div class="eng-main">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">scan controls</span>
+          <span class="card-sub">GPR</span>
+        </div>
+        <div class="card-body">
+          <div class="source-row">
+            <div class="src-btn active" id="src-sim"    onclick="setSource('sim')">simulation</div>
+            <div class="src-btn"        id="src-serial" onclick="setSource('serial')">hardware</div>
+          </div>
+          <div class="leak-control" id="leak-row">
+            <label class="leak-label">leak strength</label>
+            <input type="range" id="leak-slider" min="0" max="1" step="0.05" value="0.6">
+            <span class="leak-val" id="leak-val">0.60</span>
+          </div>
+          <div class="scan-grid">
+            <button class="btn btn-start" onclick="startScan()">▶ START</button>
+            <button class="btn btn-stop"  onclick="stopScan()">■ STOP</button>
+            <button class="btn btn-pause" id="btn-scan-pause" onclick="pauseScan()">⏸ PAUSE</button>
+            <button class="btn btn-save"  onclick="saveScan()">⬇ SAVE</button>
+          </div>
+        </div>
+      </div>
 
-</div><!-- end page-engineer -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">scan history</span>
+          <span class="card-sub" id="scan-count">0 scans</span>
+        </div>
+        <div class="card-body" style="padding:10px;">
+          <div class="scan-list" id="scan-list">
+            <div style="color:var(--muted);font-size:10px;font-family:var(--mono);padding:4px;">
+              no scans saved yet
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 
 <script>
-// ════════════════════════════════════════════════════════════
-//  CONFIGURATION  — change these two values before deploying
-// ════════════════════════════════════════════════════════════
-const FIXED_SPEED       = 30;
+// ═══════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════
 const ENGINEER_PASSWORD = 'gpr2024';
 
-document.getElementById('si-speed-val').textContent = FIXED_SPEED + ' / 100';
+// Speed levels match the ESP32's 3-bit speed table exactly
+// Level (0-7) → percent duty cycle on the motor PWM
+const SPEED_LEVELS = [0, 14, 28, 43, 57, 71, 86, 100];
+let currentSpeedLevel = 4;   // default = level 4 (57%)
 
-// ════════════════════════════════════════════════════════════
-//  MODE MANAGEMENT
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  SPEED SELECTOR
+// ═══════════════════════════════════════════════════════════
+function setSpeedLevel(lvl) {
+  currentSpeedLevel = Math.max(0, Math.min(7, lvl));
+  document.querySelectorAll('.speed-cell').forEach(c => {
+    c.classList.toggle('active', parseInt(c.dataset.level) === currentSpeedLevel);
+  });
+  document.getElementById('si-speed-val').textContent  = `level ${currentSpeedLevel} / 7`;
+  document.getElementById('si-speed-pct').textContent  = SPEED_LEVELS[currentSpeedLevel] + '%';
+}
+
+document.querySelectorAll('.speed-cell').forEach(cell => {
+  cell.addEventListener('click', () => setSpeedLevel(parseInt(cell.dataset.level)));
+});
+
+// ═══════════════════════════════════════════════════════════
+//  GPIO MONITOR — mirrors the lines the Pi sends to the ESP32
+// ═══════════════════════════════════════════════════════════
+function updateGpioMonitor(en, dirL, dirR, spdLvl) {
+  const s0 = (spdLvl >> 0) & 1;
+  const s1 = (spdLvl >> 1) & 1;
+  const s2 = (spdLvl >> 2) & 1;
+
+  const pins = [
+    ['gpio-en', en],
+    ['gpio-dl', dirL],
+    ['gpio-dr', dirR],
+    ['gpio-s0', s0],
+    ['gpio-s1', s1],
+    ['gpio-s2', s2],
+  ];
+
+  pins.forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    el.classList.toggle('high', val === 1);
+    el.querySelector('.gpio-bit').textContent = val;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODE
+// ═══════════════════════════════════════════════════════════
 let currentMode = 'viewer';
 
 function handleModeClick() {
-  if (currentMode === 'viewer') {
-    openModal();
-  } else {
-    switchMode('viewer');
-  }
+  currentMode === 'viewer' ? openModal() : switchMode('viewer');
 }
 
 function openModal() {
@@ -577,8 +1196,7 @@ function closeModal() {
 }
 
 function checkPassword() {
-  const entered = document.getElementById('pw-input').value;
-  if (entered === ENGINEER_PASSWORD) {
+  if (document.getElementById('pw-input').value === ENGINEER_PASSWORD) {
     closeModal();
     switchMode('engineer');
   } else {
@@ -593,48 +1211,61 @@ function switchMode(mode) {
   currentMode = mode;
   document.getElementById('page-viewer').classList.toggle('active',   mode === 'viewer');
   document.getElementById('page-engineer').classList.toggle('active', mode === 'engineer');
-  const badge = document.getElementById('mode-badge');
-  badge.textContent = mode === 'engineer' ? 'ENGINEER MODE' : 'VIEWER MODE';
-  badge.className   = 'mode-badge ' + mode;
-  document.getElementById('sb-dir-item').style.display = mode === 'engineer' ? 'flex' : 'none';
+  const t = document.getElementById('mode-toggle');
+  t.textContent = mode === 'engineer' ? 'ENGINEER' : 'VIEWER';
+  t.className   = 'mode-toggle ' + mode;
+  const show = mode === 'engineer';
+  document.getElementById('sb-dir-item').style.display = show ? 'flex' : 'none';
+  document.getElementById('sb-dir-sep').style.display  = show ? 'block' : 'none';
 }
 
-// ════════════════════════════════════════════════════════════
-//  TAB SWITCHING
-// ════════════════════════════════════════════════════════════
-
-// Viewer tabs: cross-section | leak indicator
-function switchViewerTab(paneId, btn) {
-  document.querySelectorAll('.viewer-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.viewer-tab-pane').forEach(p => p.classList.remove('active'));
+// ═══════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════
+function switchTab(ns, paneId, btn) {
+  const prefix = ns + '-';
+  document.querySelectorAll('.' + (ns === 'viewer' ? 'tab-btn' : 'tab-btn')).forEach(b => {
+    if (b.closest('#page-' + (ns === 'viewer' ? 'viewer' : 'engineer')) ||
+        (ns === 'viewer' && b.closest('#page-viewer')) ||
+        (ns === 'eng'    && b.closest('#page-engineer'))) {
+    }
+  });
+  // Scope to the parent card
+  const card = btn.closest('.card');
+  card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  card.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('vtab-' + paneId).classList.add('active');
+  document.getElementById(prefix + paneId).classList.add('active');
 }
 
-// Engineer visual tabs: B-scan | cross-section
-function switchVizTab(paneId, btn) {
-  document.querySelectorAll('.viz-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.viz-tab-pane').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('vtab-' + paneId).classList.add('active');
-}
-
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  SOCKET
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 const socket = io();
-let scanning = false;
-let paused   = false;
+let scanning = false, paused = false;
 
 socket.on('connect', () => {
-  const b = document.getElementById('conn-badge');
-  b.textContent = 'CONNECTED'; b.className = 'conn-badge connected';
+  const p = document.getElementById('conn-pill');
+  p.className = 'pill connected';
+  document.getElementById('conn-pill-txt').textContent = 'CONNECTED';
 });
 socket.on('disconnect', () => {
-  const b = document.getElementById('conn-badge');
-  b.textContent = 'DISCONNECTED'; b.className = 'conn-badge disconnected';
+  const p = document.getElementById('conn-pill');
+  p.className = 'pill disconnected';
+  document.getElementById('conn-pill-txt').textContent = 'DISCONNECTED';
 });
-socket.on('status',     data => updateStatus(data));
+
+socket.on('status', data => {
+  if (data.scanning !== undefined) { scanning = data.scanning; updateScanDot(); }
+  if (data.paused   !== undefined) { paused   = data.paused;   updateScanDot(); }
+  if (data.robot_connected !== undefined) {
+    const p = document.getElementById('robot-pill');
+    const t = document.getElementById('robot-pill-txt');
+    p.className = 'pill' + (data.robot_connected ? ' connected' : '');
+    t.textContent = data.robot_connected ? 'ROBOT OK' : 'ROBOT —';
+  }
+});
+
 socket.on('gpr_update', data => {
   updateBscan(data.bscan);
   updateLeakPanels(data);
@@ -643,22 +1274,38 @@ socket.on('gpr_update', data => {
   drawCrossSection('cs-canvas-view', data);
   drawCrossSection('cs-canvas-eng',  data);
 });
+
 socket.on('scan_saved', entry => addScanToHistory(entry));
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  ROBOT CONTROLS
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 const dirMap   = { fwd:{speed:1,turn:0}, back:{speed:-1,turn:0}, left:{speed:0,turn:-1}, right:{speed:0,turn:1} };
 const dirLabel = { fwd:'forward', back:'reverse', left:'turning left', right:'turning right' };
 
 function sendMove(dir) {
   const d = dirMap[dir];
-  socket.emit('cmd_move', { speed: d.speed*FIXED_SPEED, turn: d.turn*FIXED_SPEED });
+  const pct = SPEED_LEVELS[currentSpeedLevel];   // 0–100
+  const speed = d.speed * pct;
+  const turn  = d.turn  * pct;
+  socket.emit('cmd_move', { speed, turn });
   document.getElementById('sb-dir').textContent = dirLabel[dir];
+
+  // Predict the GPIO state the Pi will set, mirror it on the monitor
+  // (mirrors the tank-mix logic in app_sim.py send_move())
+  const left  = Math.max(-100, Math.min(100, speed + turn));
+  const right = Math.max(-100, Math.min(100, speed - turn));
+  const dirL  = left  >= 0 ? 1 : 0;
+  const dirR  = right >= 0 ? 1 : 0;
+  const mag   = Math.max(Math.abs(left), Math.abs(right));
+  const lvl   = Math.min(7, Math.round(mag * 7 / 100));
+  updateGpioMonitor(1, dirL, dirR, lvl);
 }
+
 function stopRobot() {
   socket.emit('cmd_stop');
   document.getElementById('sb-dir').textContent = 'stopped';
+  updateGpioMonitor(0, 0, 0, 0);
 }
 
 document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
@@ -681,6 +1328,10 @@ document.addEventListener('keydown', e => {
     document.getElementById('btn-' + keyDir[e.key])?.classList.add('pressed');
   }
   if (e.key === ' ' && currentMode === 'engineer') { e.preventDefault(); stopRobot(); }
+  // Speed level shortcuts (0-7)
+  if (currentMode === 'engineer' && /^[0-7]$/.test(e.key)) {
+    setSpeedLevel(parseInt(e.key));
+  }
 });
 document.addEventListener('keyup', e => {
   if (keyDir[e.key]) {
@@ -690,25 +1341,25 @@ document.addEventListener('keyup', e => {
   }
 });
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  SCAN CONTROLS
-// ════════════════════════════════════════════════════════════
-function startScan() { scanning=true;  socket.emit('cmd_scan_start'); updateScanDot(); }
-function stopScan()  { scanning=false; socket.emit('cmd_scan_stop');  updateScanDot(); }
+// ═══════════════════════════════════════════════════════════
+function startScan() { scanning = true;  socket.emit('cmd_scan_start'); updateScanDot(); }
+function stopScan()  { scanning = false; socket.emit('cmd_scan_stop');  updateScanDot(); }
 function pauseScan() {
   paused = !paused;
   socket.emit('cmd_scan_pause');
-  document.getElementById('btn-scan-pause').textContent = paused ? 'resume' : 'pause';
+  document.getElementById('btn-scan-pause').textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
   updateScanDot();
 }
 function saveScan() { socket.emit('cmd_save_scan'); }
 
 function setSource(src) {
   socket.emit('cmd_source', { source: src });
-  document.getElementById('src-sim').classList.toggle('active',    src==='sim');
-  document.getElementById('src-serial').classList.toggle('active', src==='serial');
-  document.getElementById('leak-row').style.display = src==='sim' ? 'flex' : 'none';
-  document.getElementById('sb-source').textContent  = src;
+  document.getElementById('src-sim').classList.toggle('active',    src === 'sim');
+  document.getElementById('src-serial').classList.toggle('active', src === 'serial');
+  document.getElementById('leak-row').style.display   = src === 'sim' ? 'flex' : 'none';
+  document.getElementById('sb-source').textContent    = src;
 }
 
 document.getElementById('leak-slider').oninput = e => {
@@ -720,15 +1371,11 @@ document.getElementById('leak-slider').oninput = e => {
 function updateScanDot() {
   const dot = document.getElementById('scan-dot');
   const lbl = document.getElementById('sb-scan');
-  if (scanning && !paused) { dot.className='status-dot active'; lbl.textContent='scanning'; }
-  else if (paused)          { dot.className='status-dot warn';   lbl.textContent='paused';   }
-  else                      { dot.className='status-dot';        lbl.textContent='idle';     }
+  if (scanning && !paused) { dot.className='scan-dot active'; lbl.textContent='scanning'; }
+  else if (paused)          { dot.className='scan-dot warn';  lbl.textContent='paused'; }
+  else                      { dot.className='scan-dot';       lbl.textContent='idle'; }
 }
 
-function updateStatus(data) {
-  if (data.scanning !== undefined) { scanning=data.scanning; updateScanDot(); }
-  if (data.paused   !== undefined) { paused=data.paused;     updateScanDot(); }
-}
 function updateStatusBar(data) {
   document.getElementById('sb-traces').textContent = data.trace_idx;
   document.getElementById('sb-er').textContent     = data.er.toFixed(2);
@@ -736,64 +1383,82 @@ function updateStatusBar(data) {
   document.getElementById('sb-time').textContent   = new Date().toLocaleTimeString();
 }
 
-// ════════════════════════════════════════════════════════════
-//  SEVERITY COLORS
-// ════════════════════════════════════════════════════════════
-const sevColor = { none:'#3dd68c', possible:'#f0a83a', likely:'#e8754b', major:'#e85555' };
+// ═══════════════════════════════════════════════════════════
+//  SEVERITY
+// ═══════════════════════════════════════════════════════════
+const sevColor = {
+  none:     'var(--accent)',
+  possible: 'var(--warn)',
+  likely:   '#ff8c42',
+  major:    'var(--danger)'
+};
+const sevHex = {
+  none: '#00e5a0', possible: '#ffb340', likely: '#ff8c42', major: '#ff4d6a'
+};
 
 function setEl(id, text, color) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent = text;
-  el.style.color = color;
+  el.textContent  = text;
+  el.style.color  = color;
 }
 
-// ════════════════════════════════════════════════════════════
-//  VIEWER SUMMARY CARDS
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  VIEWER SUMMARY
+// ═══════════════════════════════════════════════════════════
 function updateViewerSummary(data) {
-  const sc = sevColor[data.severity] || '#6b738a';
-  setEl('v-pipe',    data.pipe_detected ? 'YES' : 'searching...', sc);
-  setEl('v-depth',   data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  const sc  = sevColor[data.severity]  || 'var(--muted)';
+  const shx = sevHex[data.severity]   || '#4a5470';
+
+  setEl('v-pipe',    data.pipe_detected ? 'YES'  : 'searching…', sc);
+  setEl('v-depth',   data.pipe_detected ? '0.91 m' : '—', 'var(--text)');
   setEl('v-verdict', data.verdict ? data.verdict.toUpperCase() : 'AWAITING', sc);
 
-  // also update viewer leak tab
-  setEl('vli-pipe',  data.pipe_detected ? 'YES  z=0.91m' : 'searching...', sc);
-  setEl('vli-depth', data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  ['vc-pipe','vc-depth','vc-verdict'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'vs-card' + (data.pipe_detected ? (data.severity === 'none' ? ' ok' : data.severity === 'possible' ? ' warn' : ' alert') : '');
+  });
+
+  setEl('vli-pipe',  data.pipe_detected ? 'YES  z=0.91 m' : 'searching…', sc);
+  setEl('vli-depth', data.pipe_detected ? '0.91 m' : '—', 'var(--text)');
   setEl('vli-er',    data.er.toFixed(2) + '  (dry=4.0)', sc);
-  setEl('vli-halo',  data.halo.toFixed(3) + (data.halo>0.3?' elevated':' normal'),
-        data.halo>0.3 ? sevColor.possible : '#6b738a');
+  setEl('vli-halo',  data.halo.toFixed(3) + (data.halo > 0.3 ? '  elevated' : '  normal'),
+        data.halo > 0.3 ? sevColor.possible : 'var(--muted2)');
+
   const vb = document.getElementById('v-verdict-banner');
   if (vb) {
     vb.textContent       = data.verdict ? data.verdict.toUpperCase() : 'AWAITING DATA';
-    vb.style.color       = sc;
-    vb.style.borderColor = sc;
-    vb.style.background  = sc + '18';
+    vb.style.color       = shx;
+    vb.style.borderColor = shx;
+    vb.style.background  = shx + '18';
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  ENGINEER LEAK PANEL
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  ENGINEER LEAK
+// ═══════════════════════════════════════════════════════════
 function updateLeakPanels(data) {
-  const sc = sevColor[data.severity] || '#6b738a';
-  setEl('eli-pipe',  data.pipe_detected ? 'YES  z=0.91m' : 'searching...', sc);
-  setEl('eli-depth', data.pipe_detected ? '0.91 m' : '—', '#e0e4ef');
+  const sc  = sevColor[data.severity]  || 'var(--muted)';
+  const shx = sevHex[data.severity]   || '#4a5470';
+
+  setEl('eli-pipe',  data.pipe_detected ? 'YES  z=0.91 m' : 'searching…', sc);
+  setEl('eli-depth', data.pipe_detected ? '0.91 m' : '—', 'var(--text)');
   setEl('eli-er',    data.er.toFixed(2) + '  (dry=4.0)', sc);
-  setEl('eli-halo',  data.halo.toFixed(3) + (data.halo>0.3?' elevated':' normal'),
-        data.halo>0.3 ? sevColor.possible : '#6b738a');
+  setEl('eli-halo',  data.halo.toFixed(3) + (data.halo > 0.3 ? '  elevated' : '  normal'),
+        data.halo > 0.3 ? sevColor.possible : 'var(--muted2)');
+
   const eb = document.getElementById('e-verdict-banner');
   if (eb) {
     eb.textContent       = data.verdict ? data.verdict.toUpperCase() : 'AWAITING DATA';
-    eb.style.color       = sc;
-    eb.style.borderColor = sc;
-    eb.style.background  = sc + '18';
+    eb.style.color       = shx;
+    eb.style.borderColor = shx;
+    eb.style.background  = shx + '18';
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  B-SCAN CANVAS
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  B-SCAN
+// ═══════════════════════════════════════════════════════════
 const bscanCanvas = document.getElementById('bscan-canvas');
 const bscanCtx    = bscanCanvas.getContext('2d');
 
@@ -808,100 +1473,152 @@ function updateBscan(bscan) {
       const v   = Math.max(-40, Math.min(0, bscan[id][ix]));
       const pix = Math.round((v + 40) / 40 * 255);
       const i   = (id * Nx + ix) * 4;
-      img.data[i] = img.data[i+1] = img.data[i+2] = pix;
+      // map to teal/green colormap instead of grayscale
+      const t = pix / 255;
+      img.data[i]   = Math.round(t * 0 + (1-t) * 8);
+      img.data[i+1] = Math.round(t * 229 + (1-t) * 11);
+      img.data[i+2] = Math.round(t * 160 + (1-t) * 23);
       img.data[i+3] = 255;
     }
   }
   bscanCtx.putImageData(img, 0, 0);
 }
 
-// ════════════════════════════════════════════════════════════
-//  CROSS-SECTION  (shared renderer for both canvases)
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  CROSS-SECTION RENDERER
+// ═══════════════════════════════════════════════════════════
 function drawCrossSection(canvasId, data) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const W   = Math.max(canvas.parentElement.clientWidth - 20, 100);
-  const H   = Math.round(W * 0.88);
+  const H   = Math.round(W * 0.85);
   canvas.width  = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
-  const GY  = Math.round(H * 0.20);
+  const GY  = Math.round(H * 0.18);
   const SC  = H - GY;
   const PPM = SC / 1.5;
   const pipY = GY + 0.91 * PPM;
   const pipR = 0.06 * PPM;
   const cx   = W / 2;
 
-  // Sky + sand
-  ctx.fillStyle = '#e8e0d0'; ctx.fillRect(0, 0, W, GY);
-  ctx.fillStyle = '#b89a4e'; ctx.fillRect(0, GY, W, SC);
+  // Sky
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, GY);
+  skyGrad.addColorStop(0, '#0a0e16');
+  skyGrad.addColorStop(1, '#1a1200');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, GY);
 
-  // Depth lines
+  // Ground gradient
+  const gnd = ctx.createLinearGradient(0, GY, 0, H);
+  gnd.addColorStop(0, '#3d2a0a');
+  gnd.addColorStop(0.5, '#2a1a05');
+  gnd.addColorStop(1, '#150d02');
+  ctx.fillStyle = gnd;
+  ctx.fillRect(0, GY, W, SC);
+
+  // Depth grid lines
+  ctx.setLineDash([3, 7]);
   for (let d = 0.25; d <= 1.4; d += 0.25) {
     const ly = GY + d * PPM;
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 0.5;
-    ctx.setLineDash([3,6]);
-    ctx.beginPath(); ctx.moveTo(0,ly); ctx.lineTo(W,ly); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.font = '9px monospace';
-    ctx.fillText(d.toFixed(2)+'m', W-32, ly+3);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(W, ly); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.fillText(d.toFixed(2) + 'm', W - 36, ly - 3);
   }
+  ctx.setLineDash([]);
 
   // Leak halo
   const leak = data.leak_strength || 0;
   const sev  = data.severity || 'none';
   if (leak > 0.05 || sev !== 'none') {
+    const haloR = pipR * (1.8 + leak * 2.0);
+    const haloGrad = ctx.createRadialGradient(cx, pipY, pipR, cx, pipY, haloR);
+    const hc = sev === 'none' ? '0,229,160' : sev === 'possible' ? '255,179,64' : '255,77,106';
+    haloGrad.addColorStop(0,   `rgba(${hc},0.25)`);
+    haloGrad.addColorStop(0.5, `rgba(${hc},0.12)`);
+    haloGrad.addColorStop(1,   `rgba(${hc},0)`);
     ctx.beginPath();
-    ctx.arc(cx, pipY, pipR*(1.5+leak*1.8), 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(180,150,60,0.4)'; ctx.fill();
+    ctx.arc(cx, pipY, haloR, 0, Math.PI * 2);
+    ctx.fillStyle = haloGrad;
+    ctx.fill();
   }
 
-  // Pipe
-  ctx.beginPath(); ctx.arc(cx, pipY, pipR, 0, Math.PI*2);
-  ctx.fillStyle   = data.pipe_detected ? '#ffffff' : 'rgba(255,255,255,0.3)';
+  // Pipe body
+  const pipeGrad = ctx.createRadialGradient(cx - pipR*0.3, pipY - pipR*0.3, 0, cx, pipY, pipR);
+  pipeGrad.addColorStop(0, data.pipe_detected ? '#ffffff' : 'rgba(255,255,255,0.2)');
+  pipeGrad.addColorStop(1, data.pipe_detected ? '#aabbcc' : 'rgba(180,180,180,0.1)');
+  ctx.beginPath();
+  ctx.arc(cx, pipY, pipR, 0, Math.PI * 2);
+  ctx.fillStyle   = pipeGrad;
   ctx.fill();
-  ctx.strokeStyle = '#2a4a3a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = '#3a5a4a';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
 
   // Detection ring
   if (data.pipe_detected) {
-    ctx.beginPath(); ctx.arc(cx, pipY, pipR+5, 0, Math.PI*2);
-    ctx.strokeStyle = sevColor[sev]||'#3dd68c'; ctx.lineWidth=2; ctx.stroke();
+    const ringColor = sevHex[sev] || '#00e5a0';
+    ctx.beginPath();
+    ctx.arc(cx, pipY, pipR + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = ringColor;
+    ctx.lineWidth   = 2;
+    ctx.shadowColor = ringColor;
+    ctx.shadowBlur  = 10;
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
   }
 
   // Robot body
-  const rW=W*0.32, rH=H*0.09, rX=cx-rW/2, rY=GY-rH;
-  ctx.fillStyle='#1a1a1a'; ctx.strokeStyle='#444'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.roundRect(rX,rY,rW,rH,3); ctx.fill(); ctx.stroke();
-  ctx.fillStyle='#555';
-  ctx.fillRect(rX-5,rY+3,5,rH-6); ctx.fillRect(rX+rW,rY+3,5,rH-6);
-  ctx.fillStyle='#444';
-  ctx.fillRect(cx-rW*0.2,rY-8,rW*0.4,8);
-  ctx.fillStyle='#888'; ctx.font='9px monospace';
-  ctx.textAlign='center'; ctx.fillText('GPR',cx,rY+rH*0.65); ctx.textAlign='left';
+  const rW = W * 0.3, rH = H * 0.085, rX = cx - rW / 2, rY = GY - rH;
+  ctx.fillStyle = '#0e1117';
+  ctx.strokeStyle = '#252d40';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(rX, rY, rW, rH, 4);
+  else ctx.rect(rX, rY, rW, rH);
+  ctx.fill(); ctx.stroke();
+
+  // Tracks
+  ctx.fillStyle = '#1e2535';
+  ctx.fillRect(rX - 6, rY + 3, 6, rH - 6);
+  ctx.fillRect(rX + rW, rY + 3, 6, rH - 6);
+
+  // Antenna
+  ctx.fillStyle = '#252d40';
+  ctx.fillRect(cx - rW * 0.15, rY - 8, rW * 0.3, 8);
+
+  // Label
+  ctx.fillStyle = '#00e5a0';
+  ctx.font = 'bold 8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('GPR', cx, rY + rH * 0.65);
+  ctx.textAlign = 'left';
 
   // Ground line
-  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(0,GY); ctx.lineTo(W,GY); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, GY); ctx.lineTo(W, GY); ctx.stroke();
 }
 
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  SCAN HISTORY
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 let scanCount = 0;
 function addScanToHistory(entry) {
   scanCount++;
-  document.getElementById('scan-count').textContent =
-    scanCount + ' scan' + (scanCount!==1?'s':'');
+  document.getElementById('scan-count').textContent = scanCount + ' scan' + (scanCount !== 1 ? 's' : '');
   const list = document.getElementById('scan-list');
-  if (list.children[0]?.style?.color) list.innerHTML = '';
-  const sc = sevColor[entry.verdict]||'#6b738a';
+  if (list.children[0]?.style?.color === '') list.innerHTML = '';
+  const sc = sevHex[entry.verdict] || '#4a5470';
   const el = document.createElement('div');
   el.className = 'scan-item';
   el.innerHTML = `
-    <span class="scan-time">${entry.time.slice(9,15)}</span>
-    <span style="font-size:10px;color:var(--muted)">${entry.filename}</span>
-    <span style="color:${sc}">${entry.verdict}</span>`;
+    <span class="scan-time">${entry.time.slice(9, 15)}</span>
+    <span class="scan-file">${entry.filename}</span>
+    <span style="color:${sc};font-weight:600;">${entry.verdict}</span>`;
   list.prepend(el);
 }
 </script>

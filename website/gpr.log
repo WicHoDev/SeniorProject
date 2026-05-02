@@ -1,0 +1,187 @@
+/home/wicho/SeniorProject/website/app.py:37: EventletDeprecationWarning: 
+Eventlet is deprecated. It is currently being maintained in bugfix mode, and
+we strongly recommend against using it for new projects.
+
+If you are already using Eventlet, we recommend migrating to a different
+framework.  For more detail see
+https://eventlet.readthedocs.io/en/latest/asyncio/migration.html
+
+  import eventlet
+[WARN] gpiod not available — install with:
+       sudo apt install python3-libgpiod   # for v2 (Pi 5 native)
+       OR  pip3 install gpiod --break-system-packages   # for v1
+[GPIO] not available — robot disabled.
+==================================================
+GPR Web Server — SIMULATION MODE
+  Website:  http://0.0.0.0:5000
+  Motor:    GPIO bit-bang → ESP32 → 2× DRV8871
+  Scan Hz:  8
+  Saves to: scans
+  Open browser: http://<rpi-ip>:5000
+==================================================
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= +43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= -43
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= +43
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= +43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=1 spd=3)
+[WS] cmd_move  speed=  +0  turn= -43
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= +43
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= +43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= -43
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= +43
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=0 spd=3)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= -43
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= +43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed=  +0  turn= -43
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= +43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=1 dr=1 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
+[WS] cmd_move  speed= -43  turn=  +0
+[GPIO] write skipped — not initialized (en=1 dl=0 dr=0 spd=3)
+[WS] cmd_stop
+[GPIO] write skipped — not initialized (en=0 dl=0 dr=0 spd=0)
